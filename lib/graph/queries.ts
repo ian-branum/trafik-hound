@@ -1,3 +1,4 @@
+import neo4j from 'neo4j-driver';
 import getDriver from '@/lib/neo4j';
 
 export type GraphNode = Record<string, unknown>;
@@ -111,7 +112,7 @@ export async function listByType(type: string, skip: number = 0, limit: number =
   try {
     const result = await session.run(
       `MATCH (n:${type}) RETURN properties(n) AS props ORDER BY n.createdAt DESC SKIP $skip LIMIT $limit`,
-      { skip, limit }
+      { skip: neo4j.int(skip), limit: neo4j.int(limit) }
     );
     return result.records.map(r => r.get('props') as GraphNode);
   } finally {

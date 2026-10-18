@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get('type') ?? undefined;
     const q = searchParams.get('q') ?? undefined;
     const limit = searchParams.has('limit')
-      ? Math.min(Number(searchParams.get('limit')), 200)
+      ? Math.min(parseInt(searchParams.get('limit')!, 10), 200)
       : 50;
 
     const nodes = await searchNodes({ type, q, limit });

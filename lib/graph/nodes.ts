@@ -1,4 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
+import neo4j from 'neo4j-driver';
 import getDriver from '@/lib/neo4j';
 import { nodeSchema, type Node } from '@/lib/schemas';
 
@@ -62,7 +63,8 @@ export async function searchNodes(params: {
   q?: string;
   limit?: number;
 }): Promise<Node[]> {
-  const { type, q, limit = 50 } = params;
+  const { type, q } = params;
+  const limit = neo4j.int(params.limit ?? 50);
 
   const driver = getDriver();
   const session = driver.session();
