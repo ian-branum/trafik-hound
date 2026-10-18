@@ -12,8 +12,11 @@ function ExploreInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [type, setType] = useState(searchParams.get('type') ?? '');
-  const [q, setQ] = useState(searchParams.get('q') ?? '');
+  const initialType = searchParams.get('type') ?? '';
+  const initialQ = searchParams.get('q') ?? '';
+
+  const [type, setType] = useState(initialType);
+  const [q, setQ] = useState(initialQ);
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -29,8 +32,8 @@ function ExploreInner() {
   }, []);
 
   useEffect(() => {
-    doFetch(type, q);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    doFetch(initialType, initialQ);
+  }, [initialType, initialQ]); // re-fetch when URL params change
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
