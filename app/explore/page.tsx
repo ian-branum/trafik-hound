@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import NodeCard from '@/components/NodeCard';
 
@@ -8,7 +8,7 @@ const TYPES = ['Person', 'Organization', 'Agent', 'Transaction', 'Interaction', 
 
 type GraphNode = Record<string, unknown>;
 
-export default function ExplorePage() {
+function ExploreInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -17,7 +17,7 @@ export default function ExplorePage() {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetch_ = useCallback(async (t: string, query: string) => {
+  const doFetch = useCallback(async (t: string, query: string) => {
     setLoading(true);
     const params = new URLSearchParams();
     if (t) params.set('type', t);
@@ -29,7 +29,7 @@ export default function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    fetch_(type, q);
+    doFetch(type, q);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSearch(e: React.FormEvent) {
@@ -38,13 +38,11 @@ export default function ExplorePage() {
     if (type) params.set('type', type);
     if (q) params.set('q', q);
     router.replace(`/explore?${params}`);
-    fetch_(type, q);
+    doFetch(type, q);
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold mb-6">Explore</h1>
-
+    <>
       <form onSubmit={handleSearch} className="flex flex-wrap gap-3 mb-8">
         <select
           value={type}
@@ -80,6 +78,17 @@ export default function ExplorePage() {
           <NodeCard key={n.id as string} node={n} />
         ))}
       </div>
+    </>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <h1 className="text-2xl font-bold mb-6">Explore</h1>
+      <Suspense fallback={<p className="text-slate-500 text-sm">Loading…</p>}>
+        <ExploreInner />
+      </Suspense>
     </div>
   );
 }

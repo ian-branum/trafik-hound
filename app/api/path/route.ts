@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getShortestPath } from '@/lib/graph/queries';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/path?from=<id>&to=<id>
 // Returns the shortest path between two nodes (up to 6 hops), or 404 if none exists.
 export async function GET(req: NextRequest) {
