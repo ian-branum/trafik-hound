@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import NeighborhoodGraph from './NeighborhoodGraph';
 
+export const instant = false; // opt out of static prerendering — data is always runtime
+
 type Rel = {
   type: string;
   direction: 'outgoing' | 'incoming';
