@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type GraphNode = {
@@ -12,11 +12,8 @@ type GraphNode = {
   [key: string]: unknown;
 };
 
-type GraphLink = {
-  from: string;
-  to: string;
-  type: string;
-};
+type GraphLink = { from: string; to: string; type: string };
+type FGInstance = { zoomToFit: (ms: number, padding: number) => void };
 
 type Props = {
   nodes: GraphNode[];
@@ -39,19 +36,38 @@ function nodeColor(type: string) {
   return TYPE_COLORS[type] ?? '#e2e8f0';
 }
 
-type FGInstance = { zoomToFit: (ms: number, padding: number) => void };
-
 export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
   const cleanupRef = useRef<(() => void) | null>(null);
+  const router = useRouter();
+
+  // Track real container dimensions via ResizeObserver — handles both
+  // initial layout and fullscreen transitions correctly
+  const [dims, setDims] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(entries => {
+      const r = entries[0]?.contentRect;
+      if (r && r.width > 0 && r.height > 0) {
+        setDims({ width: r.width, height: r.height });
+      }
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
     router.push(`/nodes/${node.id}`);
   }, [router]);
 
+  // Rebuild the graph whenever data or dimensions change
   useEffect(() => {
-    if (!containerRef.current || nodes.length === 0) return;
+    if (!dims || !containerRef.current || nodes.length === 0) return;
+
+    // Tear down any previous graph instance
+    cleanupRef.current?.();
+    cleanupRef.current = null;
 
     let cancelled = false;
 
@@ -71,15 +87,11 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
         type: r.type,
       }));
 
-      const width = containerRef.current.clientWidth || 600;
-      const height = containerRef.current.clientHeight || 456;
-
       const el = document.createElement('div');
       el.style.width = '100%';
       el.style.height = '100%';
       containerRef.current.appendChild(el);
 
-      // Use a plain variable as callback ref — guaranteed to be set before onEngineStop fires
       let fgInstance: FGInstance | null = null;
 
       const root = createRoot(el);
@@ -98,10 +110,9 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
           linkColor: () => '#475569',
           linkWidth: 1.5,
           backgroundColor: '#0f172a',
-          width,
-          height,
+          width: dims.width,
+          height: dims.height,
           onNodeClick: handleNodeClick,
-          // Called once the force simulation cools — zoom to fill the canvas
           onEngineStop: () => { fgInstance?.zoomToFit(400, 40); },
           nodeCanvasObjectMode: () => 'after',
           nodeCanvasObject: (node: GraphNode, ctx: CanvasRenderingContext2D) => {
@@ -115,20 +126,16 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
         })
       );
 
-      cleanupRef.current = () => {
-        root.unmount();
-        el.remove();
-      };
+      cleanupRef.current = () => { root.unmount(); el.remove(); };
     }).catch(err => {
       console.error('[GraphCanvas] Failed to load graph library:', err);
     });
 
-    return () => {
-      cancelled = true;
-      cleanupRef.current?.();
-      cleanupRef.current = null;
-    };
-  }, [nodes, relationships, focusId, handleNodeClick]);
+    return () => { cancelled = true; };
+  }, [dims, nodes, relationships, focusId, handleNodeClick]);
+
+  // Final cleanup on unmount
+  useEffect(() => () => { cleanupRef.current?.(); }, []);
 
   if (nodes.length === 0) {
     return (
