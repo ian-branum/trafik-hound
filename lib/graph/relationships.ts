@@ -54,10 +54,12 @@ export async function getRelationshipsForNode(id: string): Promise<{
   try {
     const result = await session.run(
       `MATCH (n {id: $id})-[r]->(other)
+       WHERE NOT n:_System AND NOT other:_System
        RETURN type(r) AS type, properties(r) AS props,
               properties(other) AS otherNode, 'outgoing' AS direction
        UNION
        MATCH (n {id: $id})<-[r]-(other)
+       WHERE NOT n:_System AND NOT other:_System
        RETURN type(r) AS type, properties(r) AS props,
               properties(other) AS otherNode, 'incoming' AS direction`,
       { id }
