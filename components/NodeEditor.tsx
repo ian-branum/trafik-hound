@@ -126,6 +126,8 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
   const [documents, setDocuments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState<AttachmentKind | null>(null);
   const [attachError, setAttachError] = useState('');
+  const [marqueeUrl, setMarqueeUrl] = useState<string | null>(null);
+  const [marqueeUpdating, setMarqueeUpdating] = useState(false);
 
   const loadRelationships = useCallback(async () => {
     const res = await fetch(`/api/nodes/${encodeURIComponent(id ?? '')}`, { cache: 'no-store' });
@@ -166,6 +168,7 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
         setRelationships(Array.isArray(data.relationships) ? data.relationships : []);
         setImages(parseAttachments(loaded.images));
         setDocuments(parseAttachments(loaded.documents));
+        setMarqueeUrl(typeof loaded.marqueeUrl === 'string' ? loaded.marqueeUrl : null);
       } catch {
         if (!cancelled) setLoadError('Network error.');
       } finally {
@@ -409,6 +412,24 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
       setAttachError('Network error while uploading.');
     } finally {
       setUploading(null);
+    }
+  }
+
+  async function handleSetMarquee(url: string) {
+    if (!id || marqueeUpdating) return;
+    const newUrl = marqueeUrl === url ? null : url; // toggle off if already marquee
+    setMarqueeUpdating(true);
+    try {
+      const res = await fetch(`/api/nodes/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marqueeUrl: newUrl }),
+      });
+      if (res.ok) setMarqueeUrl(newUrl);
+    } catch {
+      // silently ignore — marquee is non-critical
+    } finally {
+      setMarqueeUpdating(false);
     }
   }
 
@@ -769,8 +790,23 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
                     <img
                       src={`/api/download?url=${encodeURIComponent(image.url)}`}
                       alt={image.name}
-                      className="h-24 w-24 object-cover rounded-lg border border-slate-700"
+                      className={`h-24 w-24 object-cover rounded-lg border-2 ${marqueeUrl === image.url ? 'border-yellow-400' : 'border-slate-700'}`}
                     />
+                    {/* Star: set as marquee image */}
+                    <button
+                      type="button"
+                      onClick={() => void handleSetMarquee(image.url)}
+                      title={marqueeUrl === image.url ? 'Remove as marquee image' : 'Set as marquee image'}
+                      aria-label={marqueeUrl === image.url ? 'Remove marquee' : 'Set as marquee'}
+                      className={`absolute bottom-1 left-1 h-6 w-6 flex items-center justify-center rounded-full bg-slate-950/80 border text-xs transition-colors ${
+                        marqueeUrl === image.url
+                          ? 'border-yellow-400 text-yellow-400'
+                          : 'border-slate-700 text-slate-500 hover:text-yellow-400 hover:border-yellow-600'
+                      }`}
+                    >
+                      ★
+                    </button>
+                    {/* Delete */}
                     <button
                       type="button"
                       onClick={() => void handleRemoveAttachment('image', image)}
