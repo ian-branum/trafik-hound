@@ -116,6 +116,8 @@ export default function GraphCanvas({ nodes, relationships, focusId, depth = 1 }
           onNodeClick: handleNodeClick,
           // Scale cooldown by depth: depth1=30, depth2=60, depth3=90 ticks
           cooldownTicks: depth * 30,
+          // Cap zoom so labels on small graphs don't fly off the canvas
+          maxZoom: 4,
           onEngineStop: () => { fgInstance?.zoomToFit(400, 40); },
           nodeCanvasObjectMode: () => 'after',
           nodeCanvasObject: (node: GraphNode, ctx: CanvasRenderingContext2D) => {
