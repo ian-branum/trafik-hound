@@ -54,6 +54,66 @@ export async function getNodeById(id: string): Promise<Node | null> {
   }
 }
 
+const SYSTEM_FIELDS = new Set(['id', 'type', 'createdAt', '_System']);
+
+/**
+ * Merge `patch` into an existing node's properties.
+ *
+ * `type`, `id` and `createdAt` are immutable and silently stripped, as is any
+ * `_`-prefixed system property. Returns the updated node, or `null` if no
+ * matching (non-system) node exists.
+ */
+export async function updateNode(
+  id: string,
+  patch: Record<string, unknown>
+): Promise<Node | null> {
+  const clean = Object.fromEntries(
+    Object.entries(patch).filter(
+      ([key, value]) =>
+        !SYSTEM_FIELDS.has(key) && !key.startsWith('_') && value !== undefined
+    )
+  );
+
+  const driver = getDriver();
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (n {id: $id})
+       WHERE NOT n:_System
+       SET n += $patch
+       RETURN properties(n) AS props`,
+      { id, patch: clean }
+    );
+    if (result.records.length === 0) return null;
+    return result.records[0].get('props') as Node;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Delete a node and all of its relationships.
+ * Returns `true` if a node was deleted, `false` if it didn't exist (or was a
+ * protected `:_System` node).
+ */
+export async function deleteNode(id: string): Promise<boolean> {
+  const driver = getDriver();
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (n {id: $id})
+       WHERE NOT n:_System
+       WITH n
+       DETACH DELETE n
+       RETURN count(*) AS deleted`,
+      { id }
+    );
+    return result.records.length > 0;
+  } finally {
+    await session.close();
+  }
+}
+
 /**
  * Search nodes by label and/or a label substring match.
  * Returns up to `limit` results (default 50).

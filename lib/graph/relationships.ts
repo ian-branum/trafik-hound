@@ -1,5 +1,5 @@
 import getDriver from '@/lib/neo4j';
-import { relationshipSchema, type Relationship } from '@/lib/schemas';
+import { relationshipSchema, relationshipType, type Relationship } from '@/lib/schemas';
 
 /**
  * Create a relationship between two existing nodes.
@@ -71,6 +71,44 @@ export async function getRelationshipsForNode(id: string): Promise<{
       otherNode: r.get('otherNode') as Record<string, unknown>,
       props: r.get('props') as Record<string, unknown>,
     }));
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Delete a single relationship.
+ *
+ * Neo4j has no stable relationship id in this schema, so edges are identified
+ * by (fromId, toId, type). `role` optionally disambiguates parallel edges —
+ * when provided, only an edge with that exact role is removed.
+ *
+ * The relationship type cannot be parameterised in Cypher, so it is inlined
+ * after being validated against the `relationshipType` enum.
+ *
+ * Returns `true` if an edge was deleted, `false` if none matched.
+ */
+export async function deleteRelationship(
+  fromId: string,
+  toId: string,
+  type: string,
+  role?: string
+): Promise<boolean> {
+  const relType = relationshipType.parse(type);
+  const roleClause = role !== undefined ? ' AND r.role = $role' : '';
+
+  const driver = getDriver();
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (a {id: $fromId})-[r:${relType}]->(b {id: $toId})
+       WHERE NOT a:_System AND NOT b:_System${roleClause}
+       WITH r LIMIT 1
+       DELETE r
+       RETURN 1 AS deleted`,
+      role !== undefined ? { fromId, toId, role } : { fromId, toId }
+    );
+    return result.records.length > 0;
   } finally {
     await session.close();
   }
