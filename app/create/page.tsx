@@ -18,6 +18,9 @@ export default function CreatePage() {
 
   return (
     <div className="max-w-xl mx-auto px-4 py-10">
+      <h1 className="text-2xl font-bold mb-4">
+        {tab === 'node' ? 'Add Node' : 'Add Relationship'}
+      </h1>
       <div className="flex gap-2 mb-8">
         <button
           type="button"
@@ -44,12 +47,9 @@ export default function CreatePage() {
       </div>
 
       {tab === 'node' ? (
-        <NodeEditor mode="create" />
+        <NodeEditor mode="create" showHeading={false} />
       ) : (
-        <div className="space-y-8">
-          <h1 className="text-2xl font-bold">Add Relationship</h1>
-          <RelationshipForm />
-        </div>
+        <RelationshipForm />
       )}
     </div>
   );

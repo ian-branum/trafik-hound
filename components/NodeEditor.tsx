@@ -51,6 +51,8 @@ export interface NodeEditorProps {
   mode: 'create' | 'edit';
   /** Required in edit mode — the node id. */
   id?: string;
+  /** Set to false to suppress the built-in h1 (e.g. when the parent renders its own heading). */
+  showHeading?: boolean;
 }
 
 /** `<input type="date">` yields YYYY-MM-DD; the API expects an ISO datetime. */
@@ -58,7 +60,7 @@ function toIsoDate(value: string, endOfDay = false): string {
   return new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}Z`).toISOString();
 }
 
-export default function NodeEditor({ mode, id }: NodeEditorProps) {
+export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorProps) {
   const router = useRouter();
   const isEdit = mode === 'edit';
 
@@ -372,7 +374,7 @@ export default function NodeEditor({ mode, id }: NodeEditorProps) {
           </Link>
         )}
         <div className="mt-3 flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold">{isEdit ? 'Edit node' : 'Add Node'}</h1>
+          {showHeading && <h1 className="text-2xl font-bold">{isEdit ? 'Edit node' : 'Add Node'}</h1>}
           {isEdit && node && (
             <span className="text-sm px-3 py-1 rounded-full bg-slate-800 text-slate-300">
               {node.subtype ? `${node.type} · ${node.subtype}` : node.type}
