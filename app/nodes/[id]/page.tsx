@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import NeighborhoodGraph from './NeighborhoodGraph';
+import NeighborhoodPanel from './NeighborhoodPanel';
 import { getNodeById } from '@/lib/graph/nodes';
 import { getRelationshipsForNode } from '@/lib/graph/relationships';
-import { getNeighborhood as getNeighborhoodData } from '@/lib/graph/queries';
+
 import { ALL_NODE_FIELD_KEYS, getNodeFields, type FieldDef } from '@/lib/schemas/nodeFields';
 
 export const instant = false;
@@ -73,10 +73,9 @@ function displayValue(field: FieldDef, value: unknown): string {
 
 export default async function NodeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [node, relationships, neighborhood] = await Promise.all([
+  const [node, relationships] = await Promise.all([
     getNodeById(id),
     getRelationshipsForNode(id),
-    getNeighborhoodData(id, 2),
   ]);
 
   if (!node) notFound();
@@ -197,22 +196,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         {/* Right: graph */}
-        <div className="border border-slate-800 rounded-lg overflow-hidden" style={{ height: '500px' }}>
-          <div className="px-4 py-3 border-b border-slate-800 text-sm text-slate-400">
-            Neighborhood (depth 2)
-          </div>
-          {neighborhood ? (
-            <NeighborhoodGraph
-              nodes={neighborhood.nodes as Parameters<typeof NeighborhoodGraph>[0]['nodes']}
-              relationships={neighborhood.relationships}
-              focusId={id}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-slate-600 text-sm">
-              No neighborhood data
-            </div>
-          )}
-        </div>
+        <NeighborhoodPanel nodeId={id} />
       </div>
     </div>
   );
