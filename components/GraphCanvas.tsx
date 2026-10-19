@@ -7,6 +7,8 @@ type GraphNode = {
   id: string;
   label: string;
   type: string;
+  x?: number;
+  y?: number;
   [key: string]: unknown;
 };
 
@@ -23,14 +25,14 @@ type Props = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  Person:       '#60a5fa', // blue
-  Organization: '#34d399', // green
-  Agent:        '#a78bfa', // purple
-  Transaction:  '#fbbf24', // amber
-  Interaction:  '#fb923c', // orange
-  Agreement:    '#f472b6', // pink
-  Record:       '#94a3b8', // slate
-  Asset:        '#2dd4bf', // teal
+  Person:       '#60a5fa',
+  Organization: '#34d399',
+  Agent:        '#a78bfa',
+  Transaction:  '#fbbf24',
+  Interaction:  '#fb923c',
+  Agreement:    '#f472b6',
+  Record:       '#94a3b8',
+  Asset:        '#2dd4bf',
 };
 
 function nodeColor(type: string) {
@@ -40,6 +42,7 @@ function nodeColor(type: string) {
 export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
     router.push(`/nodes/${node.id}`);
@@ -48,69 +51,89 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
   useEffect(() => {
     if (!containerRef.current || nodes.length === 0) return;
 
-    let graph: { _destructor?: () => void } | null = null;
     let cancelled = false;
 
-    import('react-force-graph-2d').then(mod => {
+    // Dynamically import both ForceGraph2D and ReactDOM together
+    Promise.all([
+      import('react-force-graph-2d'),
+      import('react-dom/client'),
+    ]).then(([fgMod, rdMod]) => {
       if (cancelled || !containerRef.current) return;
-      const ForceGraph2D = mod.default;
-      const ReactDOM = require('react-dom/client');
 
-      const graphNodes = nodes.map(n => ({
-        ...n,
-        // force-graph mutates node objects for position — spread to avoid polluting originals
-      }));
+      const ForceGraph2D = fgMod.default;
+      const { createRoot } = rdMod;
 
+      const graphNodes = nodes.map(n => ({ ...n }));
       const graphLinks = relationships.map(r => ({
         source: r.from,
         target: r.to,
         type: r.type,
       }));
 
-      const root = ReactDOM.createRoot(containerRef.current!);
+      const width = containerRef.current.clientWidth || 600;
+      const height = containerRef.current.clientHeight || 456;
+
+      const el = document.createElement('div');
+      el.style.width = '100%';
+      el.style.height = '100%';
+      containerRef.current.appendChild(el);
+
+      const root = createRoot(el);
       root.render(
-        ForceGraph2D({
-          graphData: { nodes: graphNodes, links: graphLinks },
-          nodeId: 'id',
-          nodeLabel: 'label',
-          nodeColor: (n: GraphNode) => nodeColor(n.type as string),
-          nodeVal: (n: GraphNode) => (n.id === focusId ? 6 : 3),
-          linkLabel: (l: { type: string }) => l.type,
-          linkDirectionalArrowLength: 6,
-          linkDirectionalArrowRelPos: 1,
-          linkColor: () => '#475569',
-          linkWidth: 1.5,
-          backgroundColor: '#0f172a',
-          width: containerRef.current!.clientWidth,
-          height: containerRef.current!.clientHeight,
-          onNodeClick: handleNodeClick,
-          nodeCanvasObjectMode: () => 'after',
-          nodeCanvasObject: (node: GraphNode & { x?: number; y?: number }, ctx: CanvasRenderingContext2D) => {
+          <ForceGraph2D
+          graphData={{ nodes: graphNodes, links: graphLinks }}
+          nodeId="id"
+          nodeLabel="label"
+          nodeColor={(n: GraphNode) => nodeColor(n.type)}
+          nodeVal={(n: GraphNode) => (n.id === focusId ? 6 : 3)}
+          linkLabel={(l: { type: string }) => l.type}
+          linkDirectionalArrowLength={6}
+          linkDirectionalArrowRelPos={1}
+          linkColor={() => '#475569'}
+          linkWidth={1.5}
+          backgroundColor="#0f172a"
+          width={width}
+          height={height}
+          onNodeClick={handleNodeClick}
+          nodeCanvasObjectMode={() => 'after'}
+          nodeCanvasObject={(node: GraphNode, ctx: CanvasRenderingContext2D) => {
             const label = (node.label as string) ?? '';
             const short = label.length > 20 ? label.slice(0, 18) + '…' : label;
             ctx.font = '5px Inter, sans-serif';
             ctx.fillStyle = '#f1f5f9';
             ctx.textAlign = 'center';
             ctx.fillText(short, node.x ?? 0, (node.y ?? 0) + 9);
-          },
-        })
+          }}
+        />
       );
 
-      // store root for cleanup
-      (containerRef.current as HTMLElement & { _graphRoot?: ReturnType<typeof ReactDOM.createRoot> })._graphRoot = root;
+      cleanupRef.current = () => {
+        root.unmount();
+        el.remove();
+      };
+    }).catch(err => {
+      console.error('[GraphCanvas] Failed to load graph library:', err);
     });
 
     return () => {
       cancelled = true;
-      const el = containerRef.current as HTMLElement & { _graphRoot?: { unmount: () => void } } | null;
-      el?._graphRoot?.unmount();
+      cleanupRef.current?.();
+      cleanupRef.current = null;
     };
   }, [nodes, relationships, focusId, handleNodeClick]);
+
+  if (nodes.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-slate-600 text-sm">
+        No connected nodes
+      </div>
+    );
+  }
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-full rounded-lg overflow-hidden"
+      className="w-full h-full"
       style={{ background: '#0f172a' }}
     />
   );
