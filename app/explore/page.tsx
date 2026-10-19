@@ -33,8 +33,11 @@ function ExploreInner() {
     params.set('skip', String((p - 1) * PAGE_SIZE));
     const res = await fetch(`/api/nodes?${params}`);
     const data = await res.json();
-    setNodes(Array.isArray(data.nodes) ? data.nodes : []);
-    setTotal(typeof data.total === 'number' ? data.total : 0);
+    // Handle both new {nodes, total} shape and legacy plain array
+    const nodeList = Array.isArray(data) ? data : (Array.isArray(data.nodes) ? data.nodes : []);
+    const nodeTotal = typeof data.total === 'number' ? data.total : nodeList.length;
+    setNodes(nodeList);
+    setTotal(nodeTotal);
     setLoading(false);
   }, []);
 
