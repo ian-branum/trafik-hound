@@ -113,8 +113,8 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
           width: dims.width,
           height: dims.height,
           onNodeClick: handleNodeClick,
-          // Hard-stop the simulation after 150 ticks (~2-3s), then zoom to fit
-          cooldownTicks: 150,
+          // Scale cooldown to graph size: 50 ticks per node, min 50, max 300
+          cooldownTicks: Math.min(300, Math.max(50, graphNodes.length * 50)),
           onEngineStop: () => { fgInstance?.zoomToFit(400, 40); },
           nodeCanvasObjectMode: () => 'after',
           nodeCanvasObject: (node: GraphNode, ctx: CanvasRenderingContext2D) => {
