@@ -114,6 +114,131 @@ export async function deleteNode(id: string): Promise<boolean> {
   }
 }
 
+export type AttachmentKind = 'image' | 'document';
+
+export interface Attachment {
+  url: string;
+  name: string;
+  size: number;
+  mimeType?: string;
+}
+
+const ATTACHMENT_PROPERTY: Record<AttachmentKind, string> = {
+  image: 'images',
+  document: 'documents',
+};
+
+/** Attachments are stored on the node as a JSON string array. */
+function parseAttachmentList(raw: unknown): Attachment[] {
+  if (Array.isArray(raw)) return raw as Attachment[];
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Attachment[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Read a node's attachment list for `kind`.
+ * Returns `null` when the node doesn't exist (or is a `:_System` node).
+ */
+export async function getAttachments(
+  nodeId: string,
+  kind: AttachmentKind
+): Promise<Attachment[] | null> {
+  const prop = ATTACHMENT_PROPERTY[kind];
+  const driver = getDriver();
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (n {id: $id})
+       WHERE NOT n:_System
+       RETURN coalesce(n.${prop}, '[]') AS raw`,
+      { id: nodeId }
+    );
+    if (result.records.length === 0) return null;
+    return parseAttachmentList(result.records[0].get('raw'));
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Append an attachment to a node's `images` or `documents` list.
+ * Returns the updated list, or `null` if the node doesn't exist.
+ */
+export async function addAttachment(
+  nodeId: string,
+  kind: AttachmentKind,
+  attachment: Attachment
+): Promise<Attachment[] | null> {
+  const prop = ATTACHMENT_PROPERTY[kind];
+  const driver = getDriver();
+  const session = driver.session();
+  try {
+    const read = await session.run(
+      `MATCH (n {id: $id})
+       WHERE NOT n:_System
+       RETURN coalesce(n.${prop}, '[]') AS raw`,
+      { id: nodeId }
+    );
+    if (read.records.length === 0) return null;
+
+    const next = [...parseAttachmentList(read.records[0].get('raw')), attachment];
+
+    await session.run(
+      `MATCH (n {id: $id})
+       WHERE NOT n:_System
+       SET n.${prop} = $json`,
+      { id: nodeId, json: JSON.stringify(next) }
+    );
+
+    return next;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Remove the attachment with the given url from a node's list.
+ * Returns the updated list, or `null` if the node doesn't exist.
+ */
+export async function removeAttachment(
+  nodeId: string,
+  kind: AttachmentKind,
+  url: string
+): Promise<Attachment[] | null> {
+  const prop = ATTACHMENT_PROPERTY[kind];
+  const driver = getDriver();
+  const session = driver.session();
+  try {
+    const read = await session.run(
+      `MATCH (n {id: $id})
+       WHERE NOT n:_System
+       RETURN coalesce(n.${prop}, '[]') AS raw`,
+      { id: nodeId }
+    );
+    if (read.records.length === 0) return null;
+
+    const next = parseAttachmentList(read.records[0].get('raw')).filter(
+      (attachment) => attachment.url !== url
+    );
+
+    await session.run(
+      `MATCH (n {id: $id})
+       WHERE NOT n:_System
+       SET n.${prop} = $json`,
+      { id: nodeId, json: JSON.stringify(next) }
+    );
+
+    return next;
+  } finally {
+    await session.close();
+  }
+}
+
 /**
  * Search nodes by label and/or a label substring match.
  * Returns up to `limit` results (default 50).

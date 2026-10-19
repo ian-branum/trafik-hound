@@ -47,6 +47,34 @@ interface GraphRelationship {
   props: Record<string, unknown>;
 }
 
+type AttachmentKind = 'image' | 'document';
+
+interface Attachment {
+  url: string;
+  name: string;
+  size: number;
+  mimeType?: string;
+}
+
+/** Attachments live on the node as JSON strings; tolerate both shapes. */
+function parseAttachments(raw: unknown): Attachment[] {
+  if (Array.isArray(raw)) return raw as Attachment[];
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Attachment[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export interface NodeEditorProps {
   mode: 'create' | 'edit';
   /** Required in edit mode — the node id. */
@@ -93,6 +121,12 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
 
   const [deleting, setDeleting] = useState(false);
 
+  // ── Edit mode: attachments ───────────────────────────────────────────────
+  const [images, setImages] = useState<Attachment[]>([]);
+  const [documents, setDocuments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState<AttachmentKind | null>(null);
+  const [attachError, setAttachError] = useState('');
+
   const loadRelationships = useCallback(async () => {
     const res = await fetch(`/api/nodes/${encodeURIComponent(id ?? '')}`, { cache: 'no-store' });
     if (!res.ok) return;
@@ -130,6 +164,8 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
         setSubtype(loaded.subtype ?? '');
         setNotes(loaded.notes ?? '');
         setRelationships(Array.isArray(data.relationships) ? data.relationships : []);
+        setImages(parseAttachments(loaded.images));
+        setDocuments(parseAttachments(loaded.documents));
       } catch {
         if (!cancelled) setLoadError('Network error.');
       } finally {
@@ -340,6 +376,69 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
       window.alert('Network error.');
     } finally {
       setDeleting(false);
+    }
+  }
+
+  // ── Edit mode: attachments ───────────────────────────────────────────────
+  async function handleUpload(kind: AttachmentKind, file: File) {
+    if (!id) return;
+    setUploading(kind);
+    setAttachError('');
+
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('nodeId', id);
+      form.append('kind', kind);
+
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setAttachError(data.error ?? 'Upload failed.');
+        return;
+      }
+
+      const attachment = data as Attachment;
+      if (kind === 'image') {
+        setImages((prev) => [...prev, attachment]);
+      } else {
+        setDocuments((prev) => [...prev, attachment]);
+      }
+    } catch {
+      setAttachError('Network error while uploading.');
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function handleRemoveAttachment(kind: AttachmentKind, attachment: Attachment) {
+    if (!id) return;
+
+    const ok = window.confirm(`Delete “${attachment.name}”?`);
+    if (!ok) return;
+
+    setAttachError('');
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeId: id, url: attachment.url, kind }),
+      });
+
+      if (!res.ok && res.status !== 404) {
+        const data = await res.json().catch(() => ({}));
+        setAttachError(data.error ?? 'Could not delete the attachment.');
+        return;
+      }
+
+      if (kind === 'image') {
+        setImages((prev) => prev.filter((item) => item.url !== attachment.url));
+      } else {
+        setDocuments((prev) => prev.filter((item) => item.url !== attachment.url));
+      }
+    } catch {
+      setAttachError('Network error while deleting.');
     }
   }
 
@@ -646,6 +745,135 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
               </div>
             </form>
           )}
+        </div>
+      )}
+
+      {/* Attachments (edit only) */}
+      {isEdit && (
+        <div className="border-t border-slate-800 pt-8">
+          <h2 className="text-lg font-semibold mb-4">Attachments</h2>
+
+          {attachError && <p className="text-red-400 text-sm mb-3">{attachError}</p>}
+
+          {/* Images */}
+          <div className="mb-6">
+            <h3 className="text-sm text-slate-400 mb-2">
+              Images {images.length > 0 && <span className="text-slate-600">({images.length})</span>}
+            </h3>
+
+            {images.length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
+                {images.map((image) => (
+                  <div key={image.url} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image.url}
+                      alt={image.name}
+                      className="h-24 w-24 object-cover rounded-lg border border-slate-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveAttachment('image', image)}
+                      title={`Delete ${image.name}`}
+                      aria-label={`Delete ${image.name}`}
+                      className="absolute top-1 right-1 h-6 w-6 flex items-center justify-center rounded-full bg-slate-950/80 border border-slate-700 text-slate-300 text-xs hover:text-red-400 hover:border-red-800 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-600 text-sm mb-3">No images yet.</p>
+            )}
+
+            <label
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-700 text-sm transition-colors ${
+                uploading !== null
+                  ? 'opacity-40 pointer-events-none'
+                  : 'text-slate-300 hover:text-white hover:border-slate-500 cursor-pointer'
+              }`}
+            >
+              {uploading === 'image' ? 'Uploading…' : '+ Attach image'}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                disabled={uploading !== null}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) void handleUpload('image', file);
+                }}
+              />
+            </label>
+          </div>
+
+          {/* Documents */}
+          <div>
+            <h3 className="text-sm text-slate-400 mb-2">
+              Documents{' '}
+              {documents.length > 0 && <span className="text-slate-600">({documents.length})</span>}
+            </h3>
+
+            {documents.length > 0 ? (
+              <ul className="space-y-2 mb-3">
+                {documents.map((document) => (
+                  <li
+                    key={document.url}
+                    className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2"
+                  >
+                    <span className="text-slate-500 text-sm" aria-hidden="true">
+                      📄
+                    </span>
+                    <a
+                      href={document.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-white hover:underline truncate"
+                    >
+                      {document.name}
+                    </a>
+                    <span className="text-xs text-slate-500 shrink-0">
+                      {formatSize(document.size)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveAttachment('document', document)}
+                      title={`Delete ${document.name}`}
+                      aria-label={`Delete ${document.name}`}
+                      className="ml-auto shrink-0 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-400 hover:text-red-400 hover:border-red-800 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-slate-600 text-sm mb-3">No documents yet.</p>
+            )}
+
+            <label
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-700 text-sm transition-colors ${
+                uploading !== null
+                  ? 'opacity-40 pointer-events-none'
+                  : 'text-slate-300 hover:text-white hover:border-slate-500 cursor-pointer'
+              }`}
+            >
+              {uploading === 'document' ? 'Uploading…' : '+ Attach document'}
+              <input
+                type="file"
+                accept=".pdf,.txt,.doc,.docx"
+                disabled={uploading !== null}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) void handleUpload('document', file);
+                }}
+              />
+            </label>
+          </div>
         </div>
       )}
 
