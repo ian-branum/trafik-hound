@@ -19,6 +19,7 @@ type Props = {
   nodes: GraphNode[];
   relationships: GraphLink[];
   focusId?: string;
+  depth?: number;
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -36,7 +37,7 @@ function nodeColor(type: string) {
   return TYPE_COLORS[type] ?? '#e2e8f0';
 }
 
-export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
+export default function GraphCanvas({ nodes, relationships, focusId, depth = 1 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const router = useRouter();
@@ -113,8 +114,8 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
           width: dims.width,
           height: dims.height,
           onNodeClick: handleNodeClick,
-          // Scale cooldown to graph size: 50 ticks per node, min 50, max 300
-          cooldownTicks: Math.min(300, Math.max(50, graphNodes.length * 50)),
+          // Scale cooldown by depth: depth1=30, depth2=60, depth3=90 ticks
+          cooldownTicks: depth * 30,
           onEngineStop: () => { fgInstance?.zoomToFit(400, 40); },
           nodeCanvasObjectMode: () => 'after',
           nodeCanvasObject: (node: GraphNode, ctx: CanvasRenderingContext2D) => {

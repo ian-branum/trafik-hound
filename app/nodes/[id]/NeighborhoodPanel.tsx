@@ -93,7 +93,7 @@ export default function NeighborhoodPanel({ nodeId }: Props) {
       {titleBar}
       <div className="w-full" style={{ height: expanded ? 'calc(100vh - 45px)' : '456px' }}>
         {data && data.nodes.length > 0 ? (
-          <GraphCanvas nodes={data.nodes} relationships={data.relationships} focusId={nodeId} />
+          <GraphCanvas nodes={data.nodes} relationships={data.relationships} focusId={nodeId} depth={depth} />
         ) : !loading ? (
           <div className="flex items-center justify-center h-full text-slate-600 text-sm">
             No connected nodes
