@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 type GraphNode = {
@@ -78,34 +78,44 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
       el.style.height = '100%';
       containerRef.current.appendChild(el);
 
-      const root = createRoot(el);
-      root.render(
-          <ForceGraph2D
-          graphData={{ nodes: graphNodes, links: graphLinks }}
-          nodeId="id"
-          nodeLabel="label"
-          nodeColor={(n: GraphNode) => nodeColor(n.type)}
-          nodeVal={(n: GraphNode) => (n.id === focusId ? 6 : 3)}
-          linkLabel={(l: { type: string }) => l.type}
-          linkDirectionalArrowLength={6}
-          linkDirectionalArrowRelPos={1}
-          linkColor={() => '#475569'}
-          linkWidth={1.5}
-          backgroundColor="#0f172a"
-          width={width}
-          height={height}
-          onNodeClick={handleNodeClick}
-          nodeCanvasObjectMode={() => 'after'}
-          nodeCanvasObject={(node: GraphNode, ctx: CanvasRenderingContext2D) => {
+            // Wrapper component so we can use a ref to call zoomToFit
+      type FGRef = { zoomToFit: (ms: number, padding: number) => void };
+      const GraphWrapper = () => {
+        const fgRef = React.useRef<FGRef>(null);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return React.createElement(ForceGraph2D as any, {
+          ref: fgRef,
+          graphData: { nodes: graphNodes, links: graphLinks },
+          nodeId: 'id',
+          nodeLabel: 'label',
+          nodeColor: (n: GraphNode) => n.id === focusId ? '#ef4444' : nodeColor(n.type),
+          nodeVal: () => 3,
+          linkLabel: (l: { type: string }) => l.type,
+          linkDirectionalArrowLength: 6,
+          linkDirectionalArrowRelPos: 1,
+          linkColor: () => '#475569',
+          linkWidth: 1.5,
+          backgroundColor: '#0f172a',
+          width,
+          height,
+          onNodeClick: handleNodeClick,
+          // Zoom to fill the canvas once the force simulation cools
+          onEngineStop: () => { fgRef.current?.zoomToFit(400, 40); },
+          nodeCanvasObjectMode: () => 'after',
+          nodeCanvasObject: (node: GraphNode, ctx: CanvasRenderingContext2D) => {
             const label = (node.label as string) ?? '';
             const short = label.length > 20 ? label.slice(0, 18) + '…' : label;
             ctx.font = '5px Inter, sans-serif';
             ctx.fillStyle = '#f1f5f9';
             ctx.textAlign = 'center';
             ctx.fillText(short, node.x ?? 0, (node.y ?? 0) + 9);
-          }}
-        />
-      );
+          },
+        });
+      };
+
+      const root = createRoot(el);
+      root.render(React.createElement(GraphWrapper));
 
       cleanupRef.current = () => {
         root.unmount();
