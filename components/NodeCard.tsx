@@ -15,7 +15,7 @@ const TYPE_COLORS: Record<string, string> = {
   Interaction:  'bg-orange-500/20 text-orange-300 border-orange-500/30',
   Agreement:    'bg-pink-500/20 text-pink-300 border-pink-500/30',
   Record:       'bg-slate-500/20 text-slate-300 border-slate-500/30',
-  Asset:        'bg-teal-500/20 text-teal-300 border-teal-500/30',
+  Asset:        'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
 };
 
 const SKIP_KEYS = new Set(['id', 'label', 'type', 'createdAt', 'marqueeUrl', 'images', 'documents']);

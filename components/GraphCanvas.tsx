@@ -23,14 +23,14 @@ type Props = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  Person:       '#60a5fa',
-  Organization: '#34d399',
-  Agent:        '#a78bfa',
-  Transaction:  '#fbbf24',
-  Interaction:  '#fb923c',
-  Agreement:    '#f472b6',
-  Record:       '#94a3b8',
-  Asset:        '#2dd4bf',
+  Person:       '#60a5fa',  // blue
+  Organization: '#34d399',  // emerald
+  Agent:        '#a78bfa',  // violet
+  Transaction:  '#fbbf24',  // amber
+  Interaction:  '#fb923c',  // orange
+  Agreement:    '#f472b6',  // pink
+  Record:       '#94a3b8',  // slate
+  Asset:        '#e879f9',  // fuchsia (distinct from all others)
 };
 
 function nodeColor(type: string) {
