@@ -44,7 +44,7 @@ export default function NodeCard({ node, compact = false }: Props) {
             <img
               src={`/api/download?url=${encodeURIComponent(marqueeUrl)}`}
               alt={label}
-              className="h-16 w-16 object-cover rounded-lg border border-slate-700 shrink-0"
+              className="h-16 w-16 object-contain rounded-lg border border-slate-700 bg-slate-900 shrink-0"
             />
           )}
         </div>

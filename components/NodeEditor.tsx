@@ -879,7 +879,7 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
                     <img
                       src={`/api/download?url=${encodeURIComponent(image.url)}`}
                       alt={image.name}
-                      className={`h-24 w-24 object-cover rounded-lg border-2 ${marqueeUrl === image.url ? 'border-yellow-400' : 'border-slate-700'}`}
+                      className={`h-24 w-24 object-contain bg-slate-900 rounded-lg border-2 ${marqueeUrl === image.url ? 'border-yellow-400' : 'border-slate-700'}`}
                     />
                     {/* Star: set as marquee image */}
                     <button

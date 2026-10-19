@@ -107,7 +107,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
               <img
                 src={`/api/download?url=${encodeURIComponent(n.marqueeUrl)}`}
                 alt={n.label as string}
-                className="h-20 w-20 object-cover rounded-lg border border-slate-700"
+                className="h-20 w-20 object-contain rounded-lg border border-slate-700 bg-slate-900"
               />
             )}
             <Link
@@ -181,7 +181,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
                       <img
                         src={`/api/download?url=${encodeURIComponent(img.url)}`}
                         alt={img.name}
-                        className="h-20 w-20 object-cover rounded-lg border border-slate-700 hover:border-slate-500 transition-colors"
+                        className="h-20 w-20 object-contain rounded-lg border border-slate-700 bg-slate-900 hover:border-slate-500 transition-colors"
                       />
                     </a>
                   ))}
