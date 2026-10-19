@@ -31,6 +31,10 @@ export const relationshipType = z.enum([
   'SIBLING_OF',           // Person ↔ Person
   'ALLIED_WITH',          // Actor ↔ Actor (political/military alliance)
 
+  // ── Location ──────────────────────────────────────────────────────────────
+  'BASED_AT',             // Person/Organization → Asset(location) — home seat/base
+  'IS_PART_OF',           // Asset(location) → Asset(location) — geographic hierarchy
+
   // ── Catch-all ─────────────────────────────────────────────────────────────
   'IS_RELATED_TO',        // Person → Person (cousins, in-laws, etc.)
   'KNOWS',                // Person → Person (generic acquaintance)
