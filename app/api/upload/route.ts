@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     const filename = safeFilename(file.name);
     const blob = await put(`trafik-hound/${nodeId}/${kind}/${filename}`, file, {
-      access: 'public',
+      access: 'private',
       token: token(),
       // Two files with the same name must not clobber each other.
       addRandomSuffix: true,

@@ -767,7 +767,7 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
                   <div key={image.url} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={image.url}
+                      src={`/api/download?url=${encodeURIComponent(image.url)}`}
                       alt={image.name}
                       className="h-24 w-24 object-cover rounded-lg border border-slate-700"
                     />
@@ -827,7 +827,7 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
                       📄
                     </span>
                     <a
-                      href={document.url}
+                      href={`/api/download?url=${encodeURIComponent(document.url)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-sm text-white hover:underline truncate"
