@@ -43,8 +43,9 @@ export default function NodeSearch({ value, onChange, placeholder }: NodeSearchP
           signal: controller.signal,
         });
         if (!res.ok) throw new Error('Search failed');
-        const data = (await res.json()) as SearchNode[];
-        setResults(Array.isArray(data) ? data : []);
+        const json = await res.json();
+        const data = (Array.isArray(json) ? json : json?.nodes ?? []) as SearchNode[];
+        setResults(data);
         setActiveIndex(-1);
         setOpen(true);
       } catch {
