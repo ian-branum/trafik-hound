@@ -160,6 +160,69 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
             </div>
           )}
 
+          {/* Images */}
+          {(() => {
+            let images: { url: string; name: string; size: number }[] = [];
+            try { images = JSON.parse(n.images as string ?? '[]'); } catch { images = []; }
+            if (images.length === 0) return null;
+            return (
+              <div className="border border-slate-800 rounded-lg p-5">
+                <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+                  Images ({images.length})
+                </h2>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                  {images.map((img, i) => (
+                    <a
+                      key={i}
+                      href={`/api/download?url=${encodeURIComponent(img.url)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={img.name}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/download?url=${encodeURIComponent(img.url)}`}
+                        alt={img.name}
+                        className="h-20 w-20 object-cover rounded-lg border border-slate-700 hover:border-slate-500 transition-colors"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Documents */}
+          {(() => {
+            let documents: { url: string; name: string; size: number; mimeType?: string }[] = [];
+            try { documents = JSON.parse(n.documents as string ?? '[]'); } catch { documents = []; }
+            if (documents.length === 0) return null;
+            const fmt = (b: number) => b > 1048576 ? `${(b/1048576).toFixed(1)} MB` : `${Math.round(b/1024)} KB`;
+            return (
+              <div className="border border-slate-800 rounded-lg p-5">
+                <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+                  Documents ({documents.length})
+                </h2>
+                <ul className="space-y-2">
+                  {documents.map((doc, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm">
+                      <span className="text-slate-500">📄</span>
+                      <a
+                        href={`/api/download?url=${encodeURIComponent(doc.url)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-white hover:underline truncate"
+                      >
+                        {doc.name}
+                      </a>
+                      <span className="text-xs text-slate-500 shrink-0">{fmt(doc.size)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
+
           {/* Relationships */}
           <div className="border border-slate-800 rounded-lg p-5">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
