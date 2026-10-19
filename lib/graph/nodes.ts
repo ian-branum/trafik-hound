@@ -247,30 +247,50 @@ export async function searchNodes(params: {
   type?: string;
   q?: string;
   limit?: number;
-}): Promise<Node[]> {
+  skip?: number;
+}): Promise<{ nodes: Node[]; total: number }> {
   const { type, q } = params;
   const limit = neo4j.int(params.limit ?? 50);
+  const skip = neo4j.int(params.skip ?? 0);
 
   const driver = getDriver();
   const session = driver.session();
   try {
-    let query: string;
-    const queryParams: Record<string, unknown> = { limit };
+    let whereClause: string;
+    const queryParams: Record<string, unknown> = { limit, skip };
 
     if (type && q) {
-      query = `MATCH (n:${type}) WHERE NOT n:_System AND toLower(n.label) CONTAINS toLower($q) RETURN properties(n) AS props LIMIT $limit`;
+      whereClause = `WHERE NOT n:_System AND toLower(n.label) CONTAINS toLower($q)`;
       queryParams.q = q;
     } else if (type) {
-      query = `MATCH (n:${type}) WHERE NOT n:_System RETURN properties(n) AS props LIMIT $limit`;
+      whereClause = `WHERE NOT n:_System`;
     } else if (q) {
-      query = `MATCH (n) WHERE NOT n:_System AND toLower(n.label) CONTAINS toLower($q) RETURN properties(n) AS props LIMIT $limit`;
+      whereClause = `WHERE NOT n:_System AND toLower(n.label) CONTAINS toLower($q)`;
       queryParams.q = q;
     } else {
-      query = `MATCH (n) WHERE NOT n:_System RETURN properties(n) AS props LIMIT $limit`;
+      whereClause = `WHERE NOT n:_System`;
     }
 
-    const result = await session.run(query, queryParams);
-    return result.records.map(r => r.get('props') as Node);
+    const matchClause = type ? `MATCH (n:${type})` : `MATCH (n)`;
+
+    const [dataResult, countResult] = await Promise.all([
+      session.run(
+        `${matchClause} ${whereClause} RETURN properties(n) AS props ORDER BY n.label SKIP $skip LIMIT $limit`,
+        queryParams
+      ),
+      session.run(
+        `${matchClause} ${whereClause} RETURN count(n) AS total`,
+        q ? { q } : {}
+      ),
+    ]);
+
+    const total = countResult.records[0]?.get('total');
+    const totalNum = typeof total?.toNumber === 'function' ? total.toNumber() : Number(total ?? 0);
+
+    return {
+      nodes: dataResult.records.map(r => r.get('props') as Node),
+      total: totalNum,
+    };
   } finally {
     await session.close();
   }

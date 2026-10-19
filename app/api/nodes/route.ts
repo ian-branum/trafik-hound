@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET /api/nodes?type=Person&q=stark&limit=20
+// GET /api/nodes?type=Person&q=stark&limit=50&skip=0
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
@@ -29,9 +29,12 @@ export async function GET(req: NextRequest) {
     const limit = searchParams.has('limit')
       ? Math.min(parseInt(searchParams.get('limit')!, 10), 200)
       : 50;
+    const skip = searchParams.has('skip')
+      ? Math.max(0, parseInt(searchParams.get('skip')!, 10))
+      : 0;
 
-    const nodes = await searchNodes({ type, q, limit });
-    return NextResponse.json(nodes);
+    const { nodes, total } = await searchNodes({ type, q, limit, skip });
+    return NextResponse.json({ nodes, total, limit, skip });
   } catch (err) {
     console.error('[GET /api/nodes]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

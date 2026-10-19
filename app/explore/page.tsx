@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import NodeCard from '@/components/NodeCard';
 
 const TYPES = ['Person', 'Organization', 'Agent', 'Transaction', 'Interaction', 'Agreement', 'Record', 'Asset'];
+const PAGE_SIZE = 50;
 
 type GraphNode = Record<string, unknown>;
 
@@ -14,39 +15,62 @@ function ExploreInner() {
 
   const initialType = searchParams.get('type') ?? '';
   const initialQ = searchParams.get('q') ?? '';
+  const initialPage = parseInt(searchParams.get('page') ?? '1', 10);
 
   const [type, setType] = useState(initialType);
   const [q, setQ] = useState(initialQ);
+  const [page, setPage] = useState(initialPage);
   const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const doFetch = useCallback(async (t: string, query: string) => {
+  const doFetch = useCallback(async (t: string, query: string, p: number) => {
     setLoading(true);
     const params = new URLSearchParams();
     if (t) params.set('type', t);
     if (query) params.set('q', query);
+    params.set('limit', String(PAGE_SIZE));
+    params.set('skip', String((p - 1) * PAGE_SIZE));
     const res = await fetch(`/api/nodes?${params}`);
     const data = await res.json();
-    setNodes(Array.isArray(data) ? data : []);
+    setNodes(Array.isArray(data.nodes) ? data.nodes : []);
+    setTotal(typeof data.total === 'number' ? data.total : 0);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    doFetch(initialType, initialQ);
-  }, [initialType, initialQ]); // re-fetch when URL params change
+    doFetch(initialType, initialQ, initialPage);
+  }, [initialType, initialQ, initialPage]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const params = new URLSearchParams();
     if (type) params.set('type', type);
     if (q) params.set('q', q);
+    params.set('page', '1');
     router.replace(`/explore?${params}`);
-    doFetch(type, q);
+    setPage(1);
+    doFetch(type, q, 1);
   }
+
+  function goToPage(p: number) {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (q) params.set('q', q);
+    params.set('page', String(p));
+    router.replace(`/explore?${params}`);
+    setPage(p);
+    doFetch(type, q, p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(page * PAGE_SIZE, total);
 
   return (
     <>
-      <form onSubmit={handleSearch} className="flex flex-wrap gap-3 mb-8">
+      <form onSubmit={handleSearch} className="flex flex-wrap gap-3 mb-6">
         <select
           value={type}
           onChange={e => setType(e.target.value)}
@@ -70,6 +94,13 @@ function ExploreInner() {
         </button>
       </form>
 
+      {/* Result count */}
+      {!loading && total > 0 && (
+        <p className="text-slate-500 text-sm mb-4">
+          Showing {from}–{to} of <span className="text-slate-300 font-medium">{total}</span> results
+        </p>
+      )}
+
       {loading && <p className="text-slate-500 text-sm">Loading…</p>}
 
       {!loading && nodes.length === 0 && (
@@ -81,6 +112,53 @@ function ExploreInner() {
           <NodeCard key={n.id as string} node={n} />
         ))}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-8">
+          <button
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1}
+            className="px-3 py-1.5 rounded-lg border border-slate-700 text-sm text-slate-400 hover:text-white hover:border-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            ← Prev
+          </button>
+
+          {/* Page number pills — show up to 7 pages around current */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+            .reduce<(number | '…')[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('…');
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) =>
+              p === '…' ? (
+                <span key={`ellipsis-${i}`} className="text-slate-600 text-sm px-1">…</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => goToPage(p as number)}
+                  className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                    p === page
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+
+          <button
+            onClick={() => goToPage(page + 1)}
+            disabled={page >= totalPages}
+            className="px-3 py-1.5 rounded-lg border border-slate-700 text-sm text-slate-400 hover:text-white hover:border-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </>
   );
 }
