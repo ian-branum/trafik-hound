@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import NodeSearch from '@/components/NodeSearch';
+import NodeFieldInput from '@/components/NodeFieldInput';
+import { getNodeFields } from '@/lib/schemas/nodeFields';
 import { relationshipType, type RelationshipType } from '@/lib/schemas/relationships';
 
 export const NODE_TYPES = [
@@ -75,6 +77,69 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+type TypeFieldValues = Record<string, string | number | boolean | null>;
+
+/** Seed the type-specific field state from a loaded node. */
+function initialTypeFields(node: Record<string, unknown>): TypeFieldValues {
+  const values: TypeFieldValues = {};
+  for (const field of getNodeFields(node.type)) {
+    const raw = node[field.key];
+
+    if (field.kind === 'boolean') {
+      values[field.key] = raw === true || raw === 'true';
+    } else if (field.kind === 'number') {
+      const num = typeof raw === 'number' ? raw : Number(raw);
+      values[field.key] = raw === null || raw === undefined || raw === '' || Number.isNaN(num)
+        ? null
+        : num;
+    } else if (Array.isArray(raw)) {
+      values[field.key] = raw.map(String).join(', ');
+    } else {
+      values[field.key] = raw === null || raw === undefined ? '' : String(raw);
+    }
+  }
+  return values;
+}
+
+/**
+ * Build the PATCH fragment for type-specific fields.
+ * Empty values are sent as `null`, which removes the property in Neo4j.
+ */
+function buildTypeFieldPatch(type: unknown, values: TypeFieldValues): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+
+  for (const field of getNodeFields(type)) {
+    const value = values[field.key];
+
+    if (field.kind === 'boolean') {
+      patch[field.key] = value === true || value === 'true';
+      continue;
+    }
+
+    const text = typeof value === 'string' ? value.trim() : value;
+
+    if (field.kind === 'number') {
+      const num = text === null || text === undefined || text === '' ? NaN : Number(text);
+      patch[field.key] = Number.isNaN(num) ? null : num;
+      continue;
+    }
+
+    if (field.key === 'aliases') {
+      // Stored as a string array in Neo4j.
+      const list =
+        typeof text === 'string'
+          ? text.split(',').map((item) => item.trim()).filter(Boolean)
+          : [];
+      patch[field.key] = list.length > 0 ? list : null;
+      continue;
+    }
+
+    patch[field.key] = text === null || text === undefined || text === '' ? null : String(text);
+  }
+
+  return patch;
+}
+
 export interface NodeEditorProps {
   mode: 'create' | 'edit';
   /** Required in edit mode — the node id. */
@@ -120,6 +185,9 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
   const [relError, setRelError] = useState('');
 
   const [deleting, setDeleting] = useState(false);
+
+  // ── Edit mode: type-specific fields ──────────────────────────────────────
+  const [typeFields, setTypeFields] = useState<TypeFieldValues>({});
 
   // ── Edit mode: attachments ───────────────────────────────────────────────
   const [images, setImages] = useState<Attachment[]>([]);
@@ -168,6 +236,7 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
         setRelationships(Array.isArray(data.relationships) ? data.relationships : []);
         setImages(parseAttachments(loaded.images));
         setDocuments(parseAttachments(loaded.documents));
+        setTypeFields(initialTypeFields(loaded as Record<string, unknown>));
         setMarqueeUrl(typeof loaded.marqueeUrl === 'string' ? loaded.marqueeUrl : null);
       } catch {
         if (!cancelled) setLoadError('Network error.');
@@ -242,6 +311,7 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
           label: label.trim(),
           subtype: subtype.trim() || null,
           notes: notes.trim() || null,
+          ...buildTypeFieldPatch(node?.type, typeFields),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -480,6 +550,7 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
   }
 
   const subtypes = SUBTYPES[isEdit ? (node?.type ?? '') : type] ?? [];
+  const editFieldDefs = isEdit ? getNodeFields(node?.type) : [];
 
   return (
     <div className="space-y-10">
@@ -571,6 +642,24 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
             className={`${INPUT_CLASS} resize-none`}
           />
         </div>
+
+        {isEdit && editFieldDefs.length > 0 && (
+          <div className="border-t border-slate-800 pt-5 space-y-5">
+            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+              {node?.type} fields
+            </h2>
+            {editFieldDefs.map((field) => (
+              <NodeFieldInput
+                key={field.key}
+                field={field}
+                value={typeFields[field.key] ?? ''}
+                onChange={(key, value) =>
+                  setTypeFields((prev) => ({ ...prev, [key]: value }))
+                }
+              />
+            ))}
+          </div>
+        )}
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
 

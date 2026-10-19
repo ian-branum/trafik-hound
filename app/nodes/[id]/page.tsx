@@ -4,6 +4,7 @@ import NeighborhoodGraph from './NeighborhoodGraph';
 import { getNodeById } from '@/lib/graph/nodes';
 import { getRelationshipsForNode } from '@/lib/graph/relationships';
 import { getNeighborhood as getNeighborhoodData } from '@/lib/graph/queries';
+import { ALL_NODE_FIELD_KEYS, getNodeFields, type FieldDef } from '@/lib/schemas/nodeFields';
 
 export const instant = false;
 
@@ -14,7 +15,61 @@ type Rel = {
   props: Record<string, unknown>;
 };
 
-const SKIP_KEYS = new Set(['id', 'label', 'type', 'createdAt', 'marqueeUrl', 'images', 'documents']);
+const SKIP_KEYS = new Set([
+  'id',
+  'label',
+  'type',
+  'subtype',
+  'createdAt',
+  'marqueeUrl',
+  'images',
+  'documents',
+  'passwordHash',
+  // Type-specific fields get their own labelled section below.
+  ...ALL_NODE_FIELD_KEYS,
+]);
+
+function formatDate(value: unknown): string {
+  const raw = String(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (!match) return raw;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function formatDateTime(value: unknown): string {
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  });
+}
+
+function hasValue(field: FieldDef, value: unknown): boolean {
+  if (value === undefined || value === null || value === '') return false;
+  if (Array.isArray(value)) return value.length > 0;
+  // Only show boolean fields when explicitly true — false is the default/unset state
+  if (field.kind === 'boolean') return value === true || value === 'true';
+  return true;
+}
+
+function displayValue(field: FieldDef, value: unknown): string {
+  if (Array.isArray(value)) return value.map(String).join(', ');
+  if (field.kind === 'boolean') return value === true || value === 'true' ? 'Yes' : 'No';
+  if (field.kind === 'date') return formatDate(value);
+  if (field.kind === 'datetime') return formatDateTime(value);
+  return String(value);
+}
 
 export default async function NodeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,7 +81,12 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
 
   if (!node) notFound();
   const n = node as Record<string, unknown>;
-  const extras = Object.entries(n).filter(([k, v]) => !SKIP_KEYS.has(k) && v !== undefined && v !== null && v !== '');
+  const extras = Object.entries(n).filter(
+    ([k, v]) => !SKIP_KEYS.has(k) && v !== undefined && v !== null && v !== ''
+  );
+  const typeEntries = getNodeFields(n.type)
+    .filter((field) => hasValue(field, n[field.key]))
+    .map((field) => ({ field, display: displayValue(field, n[field.key]) }));
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -65,15 +125,36 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left: properties + relationships */}
         <div className="space-y-6">
-          {/* Properties */}
+          {/* Type-specific properties */}
+          {typeEntries.length > 0 && (
+            <div className="border border-slate-800 rounded-lg p-5">
+              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+                Properties
+              </h2>
+              <dl className="space-y-2">
+                {typeEntries.map(({ field, display }) => (
+                  <div key={field.key} className="flex gap-3 text-sm">
+                    <dt className="text-slate-500 w-32 shrink-0">{field.label}</dt>
+                    <dd className="text-slate-200 break-all">{display}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
+          {/* Anything not covered by the field registry */}
           {extras.length > 0 && (
             <div className="border border-slate-800 rounded-lg p-5">
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Properties</h2>
+              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+                Other properties
+              </h2>
               <dl className="space-y-2">
                 {extras.map(([k, v]) => (
                   <div key={k} className="flex gap-3 text-sm">
                     <dt className="text-slate-500 w-32 shrink-0">{k}</dt>
-                    <dd className="text-slate-200 break-all">{String(v)}</dd>
+                    <dd className="text-slate-200 break-all">
+                      {Array.isArray(v) ? v.map(String).join(', ') : String(v)}
+                    </dd>
                   </div>
                 ))}
               </dl>
