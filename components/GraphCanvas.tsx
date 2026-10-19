@@ -39,6 +39,8 @@ function nodeColor(type: string) {
   return TYPE_COLORS[type] ?? '#e2e8f0';
 }
 
+type FGInstance = { zoomToFit: (ms: number, padding: number) => void };
+
 export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -53,7 +55,6 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
 
     let cancelled = false;
 
-    // Dynamically import both ForceGraph2D and ReactDOM together
     Promise.all([
       import('react-force-graph-2d'),
       import('react-dom/client'),
@@ -78,14 +79,14 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
       el.style.height = '100%';
       containerRef.current.appendChild(el);
 
-            // Wrapper component so we can use a ref to call zoomToFit
-      type FGRef = { zoomToFit: (ms: number, padding: number) => void };
-      const GraphWrapper = () => {
-        const fgRef = React.useRef<FGRef>(null);
+      // Use a plain variable as callback ref — guaranteed to be set before onEngineStop fires
+      let fgInstance: FGInstance | null = null;
 
+      const root = createRoot(el);
+      root.render(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return React.createElement(ForceGraph2D as any, {
-          ref: fgRef,
+        React.createElement(ForceGraph2D as any, {
+          ref: (inst: FGInstance | null) => { fgInstance = inst; },
           graphData: { nodes: graphNodes, links: graphLinks },
           nodeId: 'id',
           nodeLabel: 'label',
@@ -100,8 +101,8 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
           width,
           height,
           onNodeClick: handleNodeClick,
-          // Zoom to fill the canvas once the force simulation cools
-          onEngineStop: () => { fgRef.current?.zoomToFit(400, 40); },
+          // Called once the force simulation cools — zoom to fill the canvas
+          onEngineStop: () => { fgInstance?.zoomToFit(400, 40); },
           nodeCanvasObjectMode: () => 'after',
           nodeCanvasObject: (node: GraphNode, ctx: CanvasRenderingContext2D) => {
             const label = (node.label as string) ?? '';
@@ -111,11 +112,8 @@ export default function GraphCanvas({ nodes, relationships, focusId }: Props) {
             ctx.textAlign = 'center';
             ctx.fillText(short, node.x ?? 0, (node.y ?? 0) + 9);
           },
-        });
-      };
-
-      const root = createRoot(el);
-      root.render(React.createElement(GraphWrapper));
+        })
+      );
 
       cleanupRef.current = () => {
         root.unmount();
