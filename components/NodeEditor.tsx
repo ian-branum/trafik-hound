@@ -174,7 +174,7 @@ export default function NodeEditor({ mode, id, showHeading = true }: NodeEditorP
         return;
       }
 
-      router.push(`/nodes/${data.id}`);
+      router.push(`/nodes/${data.id}/edit`);
     } catch {
       setError('Network error');
     } finally {
