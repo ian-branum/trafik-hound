@@ -273,19 +273,19 @@ export async function searchNodes(params: {
 
     const matchClause = type ? `MATCH (n:${type})` : `MATCH (n)`;
 
-    const [dataResult, countResult] = await Promise.all([
-      session.run(
-        `${matchClause} ${whereClause} RETURN properties(n) AS props ORDER BY n.label SKIP $skip LIMIT $limit`,
-        queryParams
-      ),
-      session.run(
-        `${matchClause} ${whereClause} RETURN count(n) AS total`,
-        q ? { q } : {}
-      ),
-    ]);
-
+    // Run sequentially — Neo4j sessions are not safe for concurrent queries
+    const countParams = q ? { q } : {};
+    const countResult = await session.run(
+      `${matchClause} ${whereClause} RETURN count(n) AS total`,
+      countParams
+    );
     const total = countResult.records[0]?.get('total');
     const totalNum = typeof total?.toNumber === 'function' ? total.toNumber() : Number(total ?? 0);
+
+    const dataResult = await session.run(
+      `${matchClause} ${whereClause} RETURN properties(n) AS props ORDER BY n.label SKIP $skip LIMIT $limit`,
+      queryParams
+    );
 
     return {
       nodes: dataResult.records.map(r => r.get('props') as Node),
