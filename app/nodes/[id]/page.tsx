@@ -14,7 +14,7 @@ type Rel = {
   props: Record<string, unknown>;
 };
 
-const SKIP_KEYS = new Set(['id', 'label', 'type', 'createdAt']);
+const SKIP_KEYS = new Set(['id', 'label', 'type', 'createdAt', 'marqueeUrl', 'images', 'documents']);
 
 export default async function NodeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,19 +35,29 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
         <Link href="/explore" className="text-sm text-slate-500 hover:text-white transition-colors">
           ← Back to Explore
         </Link>
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="mt-3 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0 flex-wrap">
             <h1 className="text-3xl font-bold">{n.label as string}</h1>
             <span className="text-sm px-3 py-1 rounded-full bg-slate-800 text-slate-300">
               {n.subtype ? `${n.type} · ${n.subtype as string}` : n.type as string}
             </span>
           </div>
-          <Link
-            href={`/nodes/${id}/edit`}
-            className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
-          >
-            Edit
-          </Link>
+          <div className="flex items-start gap-3 shrink-0">
+            {typeof n.marqueeUrl === 'string' && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/api/download?url=${encodeURIComponent(n.marqueeUrl)}`}
+                alt={n.label as string}
+                className="h-20 w-20 object-cover rounded-lg border border-slate-700"
+              />
+            )}
+            <Link
+              href={`/nodes/${id}/edit`}
+              className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+            >
+              Edit
+            </Link>
+          </div>
         </div>
         <p className="text-slate-500 text-xs mt-1">id: {id}</p>
       </div>
