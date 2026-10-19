@@ -41,7 +41,7 @@ export async function findUserByEmail(email: string): Promise<AppUser | null> {
   const session = driver.session();
   try {
     const result = await session.run(
-      `MATCH (u:User {email: $email}) RETURN ${USER_PROPS} LIMIT 1`,
+      `MATCH (u:User:_System {email: $email}) RETURN ${USER_PROPS} LIMIT 1`,
       { email: normalizeEmail(email) }
     );
     if (result.records.length === 0) return null;
@@ -56,7 +56,7 @@ export async function getUserById(id: string): Promise<AppUser | null> {
   const session = driver.session();
   try {
     const result = await session.run(
-      `MATCH (u:User {id: $id}) RETURN ${USER_PROPS} LIMIT 1`,
+      `MATCH (u:User:_System {id: $id}) RETURN ${USER_PROPS} LIMIT 1`,
       { id }
     );
     if (result.records.length === 0) return null;
@@ -71,7 +71,7 @@ export async function listUsers(): Promise<AppUser[]> {
   const session = driver.session();
   try {
     const result = await session.run(
-      `MATCH (u:User) RETURN ${USER_PROPS} ORDER BY u.createdAt DESC`
+      `MATCH (u:User:_System) RETURN ${USER_PROPS} ORDER BY u.createdAt DESC`
     );
     return result.records.map((r) => toAppUser(r.toObject()));
   } finally {
@@ -113,19 +113,19 @@ export async function findOrCreateUser(input: UpsertUserInput): Promise<UpsertUs
     return await session.executeWrite(async (tx) => {
       // Serializes user creation so two first-time sign-ins can't both become admin.
       await tx.run(
-        `MERGE (m:AuthMeta {id: 'singleton'})
+        `MERGE (m:AuthMeta:_System {id: 'singleton'})
          SET m.rev = coalesce(m.rev, 0) + 1`
       );
 
       const existing = await tx.run(
-        `MATCH (u:User {email: $email}) RETURN ${USER_PROPS} LIMIT 1`,
+        `MATCH (u:User:_System {email: $email}) RETURN ${USER_PROPS} LIMIT 1`,
         { email }
       );
 
       if (existing.records.length > 0) {
         const current = toAppUser(existing.records[0].toObject());
         const updated = await tx.run(
-          `MATCH (u:User {id: $id})
+          `MATCH (u:User:_System {id: $id})
            SET u.lastLoginAt = $now,
                u.name  = coalesce($name, u.name),
                u.image = coalesce($image, u.image),
@@ -144,13 +144,13 @@ export async function findOrCreateUser(input: UpsertUserInput): Promise<UpsertUs
         return { user: toAppUser(updated.records[0].toObject()), created: false };
       }
 
-      const countResult = await tx.run(`MATCH (u:User) RETURN count(u) AS total`);
+      const countResult = await tx.run(`MATCH (u:User:_System) RETURN count(u) AS total`);
       const total = countResult.records[0].get("total");
       const userCount = typeof total?.toNumber === "function" ? total.toNumber() : Number(total);
       const isFirstUser = userCount === 0;
 
       const created = await tx.run(
-        `CREATE (u:User {
+        `CREATE (u:User:_System {
            id: $id,
            email: $email,
            name: $name,
@@ -236,7 +236,7 @@ export async function updateUser(id: string, patch: UpdateUserInput): Promise<Ap
   const session = driver.session();
   try {
     const result = await session.run(
-      `MATCH (u:User {id: $id})
+      `MATCH (u:User:_System {id: $id})
        SET ${sets.join(", ")}
        RETURN ${USER_PROPS}`,
       params
@@ -257,7 +257,7 @@ export async function findUserByAccount(
   const session = driver.session();
   try {
     const result = await session.run(
-      `MATCH (u:User {provider: $provider, providerAccountId: $providerAccountId})
+      `MATCH (u:User:_System {provider: $provider, providerAccountId: $providerAccountId})
        RETURN ${USER_PROPS} LIMIT 1`,
       { provider, providerAccountId }
     );
@@ -276,7 +276,7 @@ export async function findUserForCredentials(
   const session = driver.session();
   try {
     const result = await session.run(
-      `MATCH (u:User {email: $email})
+      `MATCH (u:User:_System {email: $email})
        RETURN ${USER_PROPS}, u.passwordHash AS passwordHash
        LIMIT 1`,
       { email: normalizeEmail(email) }
@@ -309,23 +309,23 @@ export async function createPasswordUser(input: {
   try {
     return await session.executeWrite(async (tx) => {
       await tx.run(
-        `MERGE (m:AuthMeta {id: 'singleton'})
+        `MERGE (m:AuthMeta:_System {id: 'singleton'})
          SET m.rev = coalesce(m.rev, 0) + 1`
       );
 
       const existing = await tx.run(
-        `MATCH (u:User {email: $email}) RETURN u.id AS id LIMIT 1`,
+        `MATCH (u:User:_System {email: $email}) RETURN u.id AS id LIMIT 1`,
         { email }
       );
       if (existing.records.length > 0) return null;
 
-      const countResult = await tx.run(`MATCH (u:User) RETURN count(u) AS total`);
+      const countResult = await tx.run(`MATCH (u:User:_System) RETURN count(u) AS total`);
       const total = countResult.records[0].get("total");
       const userCount = typeof total?.toNumber === "function" ? total.toNumber() : Number(total);
       const isFirstUser = userCount === 0;
 
       const created = await tx.run(
-        `CREATE (u:User {
+        `CREATE (u:User:_System {
            id: $id,
            email: $email,
            name: $name,

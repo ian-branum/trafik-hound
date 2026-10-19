@@ -24,6 +24,7 @@ export async function getNeighborhood(id: string, depth: number = 1): Promise<{
   try {
     const result = await session.run(
       `MATCH path = (start {id: $id})-[*1..${safeDep}]-(neighbor)
+       WHERE NOT start:_System AND NOT neighbor:_System
        RETURN
          [n IN nodes(path) | properties(n)] AS pathNodes,
          [r IN relationships(path) | {
@@ -78,6 +79,7 @@ export async function getShortestPath(fromId: string, toId: string): Promise<{
   try {
     const result = await session.run(
       `MATCH (a {id: $fromId}), (b {id: $toId})
+       WHERE NOT a:_System AND NOT b:_System
        MATCH path = shortestPath((a)-[*..6]-(b))
        RETURN
          [n IN nodes(path) | properties(n)] AS pathNodes,
@@ -111,7 +113,7 @@ export async function listByType(type: string, skip: number = 0, limit: number =
   const session = driver.session();
   try {
     const result = await session.run(
-      `MATCH (n:${type}) RETURN properties(n) AS props ORDER BY n.createdAt DESC SKIP $skip LIMIT $limit`,
+      `MATCH (n:${type}) WHERE NOT n:_System RETURN properties(n) AS props ORDER BY n.createdAt DESC SKIP $skip LIMIT $limit`,
       { skip: neo4j.int(skip), limit: neo4j.int(limit) }
     );
     return result.records.map(r => r.get('props') as GraphNode);

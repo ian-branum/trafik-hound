@@ -44,7 +44,7 @@ export async function getNodeById(id: string): Promise<Node | null> {
   const session = driver.session();
   try {
     const result = await session.run(
-      'MATCH (n {id: $id}) RETURN properties(n) AS props',
+      'MATCH (n {id: $id}) WHERE NOT n:_System RETURN properties(n) AS props',
       { id }
     );
     if (result.records.length === 0) return null;
@@ -73,15 +73,15 @@ export async function searchNodes(params: {
     const queryParams: Record<string, unknown> = { limit };
 
     if (type && q) {
-      query = `MATCH (n:${type}) WHERE toLower(n.label) CONTAINS toLower($q) RETURN properties(n) AS props LIMIT $limit`;
+      query = `MATCH (n:${type}) WHERE NOT n:_System AND toLower(n.label) CONTAINS toLower($q) RETURN properties(n) AS props LIMIT $limit`;
       queryParams.q = q;
     } else if (type) {
-      query = `MATCH (n:${type}) RETURN properties(n) AS props LIMIT $limit`;
+      query = `MATCH (n:${type}) WHERE NOT n:_System RETURN properties(n) AS props LIMIT $limit`;
     } else if (q) {
-      query = `MATCH (n) WHERE toLower(n.label) CONTAINS toLower($q) RETURN properties(n) AS props LIMIT $limit`;
+      query = `MATCH (n) WHERE NOT n:_System AND toLower(n.label) CONTAINS toLower($q) RETURN properties(n) AS props LIMIT $limit`;
       queryParams.q = q;
     } else {
-      query = `MATCH (n) RETURN properties(n) AS props LIMIT $limit`;
+      query = `MATCH (n) WHERE NOT n:_System RETURN properties(n) AS props LIMIT $limit`;
     }
 
     const result = await session.run(query, queryParams);
