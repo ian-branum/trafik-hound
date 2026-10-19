@@ -42,7 +42,7 @@ export default function NeighborhoodPanel({ nodeId }: Props) {
   const titleBar = (
     <div className="px-4 py-2 border-b border-slate-800 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">
-        <span className="text-sm text-slate-400 shrink-0">Neighborhood</span>
+        <span className="text-sm text-slate-400 shrink-0">Separation</span>
         {/* Depth chipset */}
         <div className="flex gap-1">
           {DEPTHS.map(d => (
@@ -56,7 +56,7 @@ export default function NeighborhoodPanel({ nodeId }: Props) {
                   : 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
               }`}
             >
-              {d}
+              {d}°
             </button>
           ))}
         </div>
