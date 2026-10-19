@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import NeighborhoodGraph from './NeighborhoodGraph';
-
-export const instant = false; // opt out of static prerendering — data is always runtime
+import { getNodeById } from '@/lib/graph/nodes';
+import { getRelationshipsForNode } from '@/lib/graph/relationships';
+import { getNeighborhood as getNeighborhoodData } from '@/lib/graph/queries';
 
 type Rel = {
   type: string;
@@ -13,28 +14,17 @@ type Rel = {
 
 const SKIP_KEYS = new Set(['id', 'label', 'type', 'createdAt']);
 
-async function getNode(id: string) {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-  const res = await fetch(`${base}/api/nodes/${id}`, { cache: 'no-store' });
-  if (!res.ok) return null;
-  return res.json() as Promise<{ node: Record<string, unknown>; relationships: Rel[] }>;
-}
-
-async function getNeighborhood(id: string) {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-  const res = await fetch(`${base}/api/nodes/${id}/neighborhood?depth=2`, { cache: 'no-store' });
-  if (!res.ok) return null;
-  return res.json() as Promise<{ nodes: Record<string, unknown>[]; relationships: { from: string; to: string; type: string }[] }>;
-}
-
 export default async function NodeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [detail, neighborhood] = await Promise.all([getNode(id), getNeighborhood(id)]);
+  const [node, relationships, neighborhood] = await Promise.all([
+    getNodeById(id),
+    getRelationshipsForNode(id),
+    getNeighborhoodData(id, 2),
+  ]);
 
-  if (!detail) notFound();
-
-  const { node, relationships } = detail;
-  const extras = Object.entries(node).filter(([k, v]) => !SKIP_KEYS.has(k) && v !== undefined && v !== null && v !== '');
+  if (!node) notFound();
+  const n = node as Record<string, unknown>;
+  const extras = Object.entries(n).filter(([k, v]) => !SKIP_KEYS.has(k) && v !== undefined && v !== null && v !== '');
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -44,9 +34,9 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
           ← Back to Explore
         </Link>
         <div className="mt-3 flex items-center gap-3">
-          <h1 className="text-3xl font-bold">{node.label as string}</h1>
+          <h1 className="text-3xl font-bold">{n.label as string}</h1>
           <span className="text-sm px-3 py-1 rounded-full bg-slate-800 text-slate-300">
-            {node.subtype ? `${node.type} · ${node.subtype}` : node.type as string}
+            {n.subtype ? `${n.type} · ${n.subtype as string}` : n.type as string}
           </span>
         </div>
         <p className="text-slate-500 text-xs mt-1">id: {id}</p>
