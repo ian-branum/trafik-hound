@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 // Auth-gated page: allow blocking (dynamic) rendering instead of prerendering.
-export const instant = false;
+export const dynamic = 'force-dynamic';
 
 export default async function AdminUsersPage() {
   const session = await auth();

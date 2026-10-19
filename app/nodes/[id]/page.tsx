@@ -5,6 +5,8 @@ import { getNodeById } from '@/lib/graph/nodes';
 import { getRelationshipsForNode } from '@/lib/graph/relationships';
 import { getNeighborhood as getNeighborhoodData } from '@/lib/graph/queries';
 
+export const dynamic = 'force-dynamic';
+
 type Rel = {
   type: string;
   direction: 'outgoing' | 'incoming';
