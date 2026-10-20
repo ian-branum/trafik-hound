@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 
-type TabKey = 'properties' | 'attachments' | 'relationships';
+type TabKey = 'properties' | 'attachments' | 'relationships' | 'notes' | 'discussion';
 
 interface NodeTabsProps {
   properties: React.ReactNode;
   attachments: React.ReactNode;
   relationships: React.ReactNode;
+  notes: React.ReactNode;
+  discussion: React.ReactNode;
   defaultTab?: TabKey;
 }
 
@@ -15,12 +17,16 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'properties', label: 'Properties' },
   { key: 'attachments', label: 'Attachments' },
   { key: 'relationships', label: 'Relationships' },
+  { key: 'notes', label: 'Notes' },
+  { key: 'discussion', label: 'Discussion' },
 ];
 
 export default function NodeTabs({
   properties,
   attachments,
   relationships,
+  notes,
+  discussion,
   defaultTab = 'properties',
 }: NodeTabsProps) {
   const [active, setActive] = useState<TabKey>(defaultTab);
@@ -53,6 +59,8 @@ export default function NodeTabs({
         {active === 'properties' && properties}
         {active === 'attachments' && attachments}
         {active === 'relationships' && relationships}
+        {active === 'notes' && notes}
+        {active === 'discussion' && discussion}
       </div>
     </div>
   );

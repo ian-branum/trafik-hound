@@ -3,6 +3,8 @@ import Link from 'next/link';
 import NeighborhoodPanel from './NeighborhoodPanel';
 import FindConnectionButton from '@/components/FindConnectionButton';
 import NodeTabs from '@/components/NodeTabs';
+import NotesPanel from '@/components/NotesPanel';
+import DiscussionPanel from '@/components/DiscussionPanel';
 import { getNodeById } from '@/lib/graph/nodes';
 import { getRelationshipsForNode } from '@/lib/graph/relationships';
 import { auth } from '@/auth';
@@ -300,6 +302,8 @@ export default async function NodeDetailPage({
                 )}
               </>
             }
+            notes={<NotesPanel nodeId={id} />}
+            discussion={<DiscussionPanel nodeId={id} />}
           />
         </div>
 
