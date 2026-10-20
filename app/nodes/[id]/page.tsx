@@ -71,8 +71,16 @@ function displayValue(field: FieldDef, value: unknown): string {
   return String(value);
 }
 
-export default async function NodeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function NodeDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { id } = await params;
+  const { from } = await searchParams;
+  const backHref = from ? decodeURIComponent(from) : '/explore';
   const [node, relationships] = await Promise.all([
     getNodeById(id),
     getRelationshipsForNode(id),
@@ -91,7 +99,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
     <div className="max-w-6xl mx-auto px-4 py-10">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/explore" className="text-sm text-slate-500 hover:text-white transition-colors">
+        <Link href={backHref} className="text-sm text-slate-500 hover:text-white transition-colors">
           ← Back to Explore
         </Link>
         <div className="mt-3 flex items-start justify-between gap-4">

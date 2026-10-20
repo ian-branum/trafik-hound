@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 type Props = {
   node: Record<string, unknown>;
@@ -24,13 +25,18 @@ export default function NodeCard({ node, compact = false }: Props) {
   const type = node.type as string;
   const label = node.label as string;
   const id = node.id as string;
+  const searchParams = useSearchParams();
+  const fromParams = searchParams.toString();
+  const nodeHref = fromParams
+    ? `/nodes/${id}?from=${encodeURIComponent(`/explore?${fromParams}`)}`
+    : `/nodes/${id}`;
   const colorClass = TYPE_COLORS[type] ?? 'bg-slate-500/20 text-slate-300 border-slate-500/30';
   const marqueeUrl = typeof node.marqueeUrl === 'string' ? node.marqueeUrl : null;
 
   const extras = Object.entries(node).filter(([k, v]) => !SKIP_KEYS.has(k) && v !== undefined && v !== null && v !== '');
 
   return (
-    <Link href={`/nodes/${id}`} className="block group">
+    <Link href={nodeHref} className="block group">
       <div className={`border rounded-lg p-4 transition-all hover:scale-[1.01] hover:shadow-lg ${colorClass}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
