@@ -289,7 +289,7 @@ export default function FindConnectionModal({ sourceNode, onClose }: Props) {
 
         <div className="p-5 space-y-5">
           {/* Target search */}
-          <div ref={searchRef} className="relative min-h-[300px]">
+          <div ref={searchRef} className={`relative ${!target ? 'min-h-[300px]' : ''}`}>
             <label className="block text-sm text-slate-400 mb-1">Connect to…</label>
             <input
               type="text"
