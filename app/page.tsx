@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AddNodeButton from '@/components/AddNodeButton';
 
 const ENTITY_TYPES = [
   { label: 'People',        type: 'Person',       icon: '👤', color: 'text-blue-400' },
@@ -28,12 +29,7 @@ export default function HomePage() {
           >
             Explore Graph
           </Link>
-          <Link
-            href="/create"
-            className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
-          >
-            Add Node
-          </Link>
+          <AddNodeButton />
         </div>
       </div>
 
