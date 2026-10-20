@@ -2,19 +2,22 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import GraphCanvas from '@/components/GraphCanvas';
+import FindConnectionModal from '@/components/FindConnectionModal';
 
 type GraphNode = { id: string; label: string; type: string; [key: string]: unknown };
 type GraphRel = { from: string; to: string; type: string };
 
 interface Props {
   nodeId: string;
+  nodeLabel: string;
 }
 
 const DEPTHS = [1, 2, 3] as const;
 type Depth = typeof DEPTHS[number];
 
-export default function NeighborhoodPanel({ nodeId }: Props) {
+export default function NeighborhoodPanel({ nodeId, nodeLabel }: Props) {
   const [depth, setDepth] = useState<Depth>(1);
+  const [findOpen, setFindOpen] = useState(false);
   const [data, setData] = useState<{ nodes: GraphNode[]; relationships: GraphRel[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -63,28 +66,44 @@ export default function NeighborhoodPanel({ nodeId }: Props) {
         {loading && <span className="text-xs text-slate-600 animate-pulse">Loading…</span>}
       </div>
 
-      {/* Expand / Collapse button */}
-      <button
-        type="button"
-        onClick={() => setExpanded(e => !e)}
-        title={expanded ? 'Collapse (Esc)' : 'Expand to fullscreen'}
-        aria-label={expanded ? 'Collapse graph' : 'Expand graph'}
-        className="rounded-md border border-slate-700 p-1.5 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
-      >
-        {expanded ? (
-          // Collapse icon
+      <div className="flex items-center gap-2">
+        {/* Find connection */}
+        <button
+          type="button"
+          onClick={() => setFindOpen(true)}
+          title="Find Connection"
+          aria-label="Find Connection"
+          className="rounded-md border border-slate-700 p-1.5 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
-            <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
           </svg>
-        ) : (
-          // Expand icon
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 8V3h5"/><path d="M21 8V3h-5"/>
-            <path d="M3 16v5h5"/><path d="M21 16v5h-5"/>
-          </svg>
-        )}
-      </button>
+        </button>
+
+        {/* Expand / Collapse button */}
+        <button
+          type="button"
+          onClick={() => setExpanded(e => !e)}
+          title={expanded ? 'Collapse (Esc)' : 'Expand to fullscreen'}
+          aria-label={expanded ? 'Collapse graph' : 'Expand graph'}
+          className="rounded-md border border-slate-700 p-1.5 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
+        >
+          {expanded ? (
+            // Collapse icon
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+              <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+            </svg>
+          ) : (
+            // Expand icon
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 8V3h5"/><path d="M21 8V3h-5"/>
+              <path d="M3 16v5h5"/><path d="M21 16v5h-5"/>
+            </svg>
+          )}
+        </button>
+      </div>
     </div>
   );
 
@@ -100,6 +119,13 @@ export default function NeighborhoodPanel({ nodeId }: Props) {
           </div>
         ) : null}
       </div>
+
+      {findOpen && (
+        <FindConnectionModal
+          sourceNode={{ id: nodeId, label: nodeLabel }}
+          onClose={() => setFindOpen(false)}
+        />
+      )}
     </>
   );
 
