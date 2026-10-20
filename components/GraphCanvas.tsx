@@ -20,6 +20,7 @@ type Props = {
   relationships: GraphLink[];
   focusId?: string;
   depth?: number;
+  expanded?: boolean;
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -37,7 +38,7 @@ function nodeColor(type: string) {
   return TYPE_COLORS[type] ?? '#e2e8f0';
 }
 
-export default function GraphCanvas({ nodes, relationships, focusId, depth = 1 }: Props) {
+export default function GraphCanvas({ nodes, relationships, focusId, depth = 1, expanded = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const router = useRouter();
@@ -59,8 +60,9 @@ export default function GraphCanvas({ nodes, relationships, focusId, depth = 1 }
   }, []);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
-    router.push(`/nodes/${node.id}`);
-  }, [router]);
+    const url = expanded ? `/nodes/${node.id}?expanded=true` : `/nodes/${node.id}`;
+    router.push(url);
+  }, [router, expanded]);
 
   // Rebuild the graph whenever data or dimensions change
   useEffect(() => {

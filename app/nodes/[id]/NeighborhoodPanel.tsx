@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import GraphCanvas from '@/components/GraphCanvas';
 import FindConnectionModal from '@/components/FindConnectionModal';
 
@@ -20,7 +21,8 @@ export default function NeighborhoodPanel({ nodeId, nodeLabel }: Props) {
   const [findOpen, setFindOpen] = useState(false);
   const [data, setData] = useState<{ nodes: GraphNode[]; relationships: GraphRel[] } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
+  const searchParams = useSearchParams();
+  const [expanded, setExpanded] = useState(() => searchParams.get('expanded') === 'true');
 
   const load = useCallback(async (d: Depth) => {
     setLoading(true);
@@ -112,7 +114,7 @@ export default function NeighborhoodPanel({ nodeId, nodeLabel }: Props) {
       {titleBar}
       <div className="w-full" style={{ height: expanded ? 'calc(100vh - 45px)' : '456px' }}>
         {data && data.nodes.length > 0 ? (
-          <GraphCanvas nodes={data.nodes} relationships={data.relationships} focusId={nodeId} depth={depth} />
+          <GraphCanvas nodes={data.nodes} relationships={data.relationships} focusId={nodeId} depth={depth} expanded={expanded} />
         ) : !loading ? (
           <div className="flex items-center justify-center h-full text-slate-600 text-sm">
             No connected nodes

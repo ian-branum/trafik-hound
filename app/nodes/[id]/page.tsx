@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import NeighborhoodPanel from './NeighborhoodPanel';
 import FindConnectionButton from '@/components/FindConnectionButton';
@@ -308,7 +309,9 @@ export default async function NodeDetailPage({
         </div>
 
         {/* Right: graph */}
-        <NeighborhoodPanel nodeId={id} nodeLabel={n.label as string} />
+        <Suspense fallback={<div className="border border-slate-800 rounded-lg h-[500px]" />}>
+          <NeighborhoodPanel nodeId={id} nodeLabel={n.label as string} />
+        </Suspense>
       </div>
     </div>
   );
