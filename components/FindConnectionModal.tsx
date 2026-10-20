@@ -266,7 +266,7 @@ export default function FindConnectionModal({ sourceNode, onClose }: Props) {
       aria-label="Find connection"
     >
       <div
-        className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-xl border border-slate-800 bg-slate-900 shadow-2xl"
+        className="relative w-full max-w-[90vw] max-h-[85vh] overflow-y-auto rounded-xl border border-slate-800 bg-slate-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -289,7 +289,7 @@ export default function FindConnectionModal({ sourceNode, onClose }: Props) {
 
         <div className="p-5 space-y-5">
           {/* Target search */}
-          <div ref={searchRef} className="relative">
+          <div ref={searchRef} className="relative min-h-[300px]">
             <label className="block text-sm text-slate-400 mb-1">Connect to…</label>
             <input
               type="text"
