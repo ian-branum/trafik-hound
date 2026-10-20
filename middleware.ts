@@ -51,6 +51,14 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/?error=forbidden", nextUrl.origin));
   }
 
+  // Viewer role cannot create or edit nodes.
+  const isWriteRoute =
+    pathname === "/create" ||
+    (pathname.startsWith("/nodes/") && pathname.endsWith("/edit"));
+  if (isWriteRoute && session.user.role === "viewer") {
+    return NextResponse.redirect(new URL("/explore?error=forbidden", nextUrl.origin));
+  }
+
   return NextResponse.next();
 });
 

@@ -119,7 +119,8 @@ export default function UsersTable({ initialUsers, currentUserId }: UsersTablePr
                       onChange={(e) => void patchUser(user.id, { role: e.target.value as UserRole })}
                       className="rounded-md bg-slate-950 border border-slate-800 px-2 py-1 text-xs text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-blue-500"
                     >
-                      <option value="user">user</option>
+                      <option value="viewer">viewer</option>
+                      <option value="editor">editor</option>
                       <option value="admin">admin</option>
                     </select>
                   </td>

@@ -5,10 +5,6 @@ import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { useState } from 'react';
 
-const LINKS = [
-  { href: '/explore', label: 'Explore' },
-  { href: '/create', label: 'Create' },
-];
 
 function initials(name?: string | null, email?: string | null) {
   const source = name?.trim() || email?.split('@')[0] || '?';
@@ -24,8 +20,13 @@ export default function Nav() {
 
   const user = session?.user;
   const isAdmin = user?.role === 'admin';
+  const isViewer = user?.role === 'viewer';
 
-  const links = isAdmin ? [...LINKS, { href: '/admin/users', label: 'Admin' }] : LINKS;
+  const links = [
+    { href: '/explore', label: 'Explore' },
+    ...(!isViewer ? [{ href: '/create', label: 'Create' }] : []),
+    ...(isAdmin ? [{ href: '/admin/users', label: 'Admin' }] : []),
+  ];
 
   const linkClass = (href: string) =>
     `transition-colors hover:text-white ${pathname === href ? 'text-white' : ''}`;

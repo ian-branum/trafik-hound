@@ -3,6 +3,7 @@ import Link from 'next/link';
 import NeighborhoodPanel from './NeighborhoodPanel';
 import { getNodeById } from '@/lib/graph/nodes';
 import { getRelationshipsForNode } from '@/lib/graph/relationships';
+import { auth } from '@/auth';
 
 import { ALL_NODE_FIELD_KEYS, getNodeFields, type FieldDef } from '@/lib/schemas/nodeFields';
 
@@ -81,6 +82,8 @@ export default async function NodeDetailPage({
   const { id } = await params;
   const { from } = await searchParams;
   const backHref = from ? decodeURIComponent(from) : '/explore';
+  const session = await auth();
+  const canEdit = session?.user?.role === 'admin' || session?.user?.role === 'editor';
   const [node, relationships] = await Promise.all([
     getNodeById(id),
     getRelationshipsForNode(id),
@@ -118,12 +121,14 @@ export default async function NodeDetailPage({
                 className="h-20 w-20 object-contain rounded-lg border border-slate-700 bg-slate-900"
               />
             )}
-            <Link
-              href={`/nodes/${id}/edit`}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
-            >
-              Edit
-            </Link>
+            {canEdit && (
+              <Link
+                href={`/nodes/${id}/edit`}
+                className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+              >
+                Edit
+              </Link>
+            )}
           </div>
         </div>
         <p className="text-slate-500 text-xs mt-1">id: {id}</p>
