@@ -156,7 +156,7 @@ export default async function NodeDetailPage({
             )}
           </div>
         </div>
-        <p className="text-slate-500 text-xs mt-1">id: {id}</p>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
