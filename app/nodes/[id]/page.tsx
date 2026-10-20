@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import NeighborhoodPanel from './NeighborhoodPanel';
+import FindConnectionButton from '@/components/FindConnectionButton';
 import { getNodeById } from '@/lib/graph/nodes';
 import { getRelationshipsForNode } from '@/lib/graph/relationships';
 import { auth } from '@/auth';
@@ -236,9 +237,12 @@ export default async function NodeDetailPage({
 
           {/* Relationships */}
           <div className="border border-slate-800 rounded-lg p-5">
-            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
-              Relationships ({relationships.length})
-            </h2>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+                Relationships ({relationships.length})
+              </h2>
+              <FindConnectionButton sourceNode={{ id, label: n.label as string }} />
+            </div>
             {relationships.length === 0 ? (
               <p className="text-slate-600 text-sm">None yet.</p>
             ) : (
