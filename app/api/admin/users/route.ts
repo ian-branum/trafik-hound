@@ -23,7 +23,7 @@ export async function GET() {
 const patchSchema = z.object({
   id: z.string().min(1),
   enabled: z.boolean().optional(),
-  role: z.enum(["admin", "user"]).optional(),
+  role: z.enum(["admin", "editor", "viewer"]).optional(),
 });
 
 export async function PATCH(req: NextRequest) {

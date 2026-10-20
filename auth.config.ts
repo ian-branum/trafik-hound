@@ -21,7 +21,7 @@ export const authConfig = {
     session({ session, token }) {
       if (session.user) {
         session.user.userId = String(token.userId ?? token.sub ?? "");
-        session.user.role = (token.role as UserRole | undefined) ?? "user";
+        session.user.role = (token.role as UserRole | undefined) ?? "viewer";
         session.user.enabled = token.enabled !== false;
       }
       return session;
