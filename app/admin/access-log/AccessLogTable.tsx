@@ -7,6 +7,7 @@ import type { AuditAction, AuditEntry } from '@/lib/audit/log';
 const ACTION_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'All actions' },
   { value: 'auth_login', label: 'Auth: Login' },
+  { value: 'auth_logout', label: 'Auth: Logout' },
   { value: 'node_create', label: 'Node: Create' },
   { value: 'node_edit', label: 'Node: Edit' },
   { value: 'node_delete', label: 'Node: Delete' },
@@ -17,6 +18,7 @@ const ACTION_OPTIONS: { value: string; label: string }[] = [
 
 const ACTION_COLORS: Record<string, string> = {
   auth_login: 'bg-emerald-950/40 border-emerald-900 text-emerald-300',
+  auth_logout: 'bg-slate-800 border-slate-700 text-slate-400',
   node_create: 'bg-blue-950/40 border-blue-900 text-blue-300',
   node_edit: 'bg-amber-950/40 border-amber-900 text-amber-300',
   node_delete: 'bg-red-950/40 border-red-900 text-red-300',

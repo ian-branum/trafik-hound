@@ -4,6 +4,7 @@ import getDriver from '@/lib/neo4j';
 
 export type AuditAction =
   | 'auth_login'
+  | 'auth_logout'
   | 'node_create'
   | 'node_edit'
   | 'node_delete'

@@ -64,6 +64,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    async signOut(message) {
+      // `message` is { token } for JWT sessions.
+      const token = (message as { token?: Record<string, unknown> }).token;
+      void writeAuditLog({
+        userId: (token?.userId as string) ?? null,
+        userEmail: (token?.email as string) ?? null,
+        action: "auth_logout",
+        detail: (token?.provider as string) ?? null,
+      }).catch(console.error);
+    },
+  },
   callbacks: {
     ...authConfig.callbacks,
 
