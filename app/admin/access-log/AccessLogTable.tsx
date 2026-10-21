@@ -69,6 +69,52 @@ async function resolveNodeLabel(id: string): Promise<string | null> {
   }
 }
 
+/**
+ * Renders a target node as a labelled link, lazy-fetching the label from the
+ * API when it wasn't stored in the audit entry (older entries, isolated nodes).
+ */
+function NodeTarget({
+  id,
+  storedLabel,
+  inline = false,
+}: {
+  id: string | null | undefined;
+  storedLabel: string | null | undefined;
+  inline?: boolean;
+}) {
+  const [label, setLabel] = useState<string | null>(storedLabel ?? null);
+  const [resolved, setResolved] = useState(!!storedLabel || !id);
+
+  useEffect(() => {
+    // If we already have a label (or there's no id to look up), nothing to do.
+    if (storedLabel || !id) return;
+    let alive = true;
+    resolveNodeLabel(id)
+      .then((l) => { if (alive) { setLabel(l); setResolved(true); } })
+      .catch(() => { if (alive) setResolved(true); });
+    return () => { alive = false; };
+  }, [id, storedLabel]);
+
+  if (!id) return <span className="text-slate-600">—</span>;
+
+  if (!resolved) {
+    return inline
+      ? <span className="text-slate-500 animate-pulse text-xs font-mono">{id.slice(0, 8)}…</span>
+      : <span className="text-slate-500 animate-pulse">{id.slice(0, 8)}…</span>;
+  }
+
+  return (
+    <Link
+      href={`/nodes/${id}`}
+      target="_blank"
+      className="text-blue-400 hover:underline"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {label ?? (inline ? <span className="font-mono text-xs">{id.slice(0, 8)}…</span> : id)}
+    </Link>
+  );
+}
+
 /** True when this key/value pair looks like a reference to a graph node. */
 function looksLikeNodeId(key: string, value: unknown): value is string {
   if (typeof value !== 'string') return false;
@@ -240,17 +286,7 @@ function EntryModal({ entry, onClose }: { entry: AuditEntry; onClose: () => void
               <div className="flex gap-3 text-sm">
                 <dt className="text-slate-500 w-24 shrink-0">Target</dt>
                 <dd className="min-w-0 break-all">
-                  {entry.targetId ? (
-                    <Link
-                      href={`/nodes/${entry.targetId}`}
-                      target="_blank"
-                      className="text-blue-400 hover:underline"
-                    >
-                      {entry.targetLabel ?? entry.targetId}
-                    </Link>
-                  ) : (
-                    <span className="text-slate-200">{entry.targetLabel}</span>
-                  )}
+                  <NodeTarget id={entry.targetId} storedLabel={entry.targetLabel} />
                 </dd>
               </div>
             )}
@@ -424,16 +460,8 @@ export default function AccessLogTable() {
                         {entry.action}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-300 text-xs">
-                      {entry.targetLabel ?? (
-                        entry.targetId ? (
-                          <span className="font-mono text-slate-500">
-                            {entry.targetId.slice(0, 8)}…
-                          </span>
-                        ) : (
-                          <span className="text-slate-600">—</span>
-                        )
-                      )}
+                    <td className="px-4 py-3 text-xs">
+                      <NodeTarget id={entry.targetId} storedLabel={entry.targetLabel} inline />
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs max-w-[16rem] truncate">
                       {entry.detail ?? '—'}
