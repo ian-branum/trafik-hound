@@ -15,11 +15,16 @@ export async function GET(
     const result = await getNeighborhood(id, depth);
 
     const session = await auth();
+    // Label the root node so the admin log can show a name instead of a bare id.
+    const rootNode = result.nodes.find(
+      (n: Record<string, unknown>) => n.id === id
+    );
     void writeAuditLog({
       userId: session?.user?.userId ?? null,
       userEmail: session?.user?.email ?? null,
       action: 'graph_query',
       targetId: id,
+      targetLabel: (rootNode?.label as string | undefined) ?? null,
       detail: JSON.stringify({ endpoint: 'neighborhood', nodeId: id, depth }),
     }).catch(console.error);
 

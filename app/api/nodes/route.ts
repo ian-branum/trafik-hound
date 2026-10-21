@@ -46,6 +46,23 @@ export async function GET(req: NextRequest) {
       : 0;
 
     const { nodes, total } = await searchNodes({ type, q, limit, skip });
+
+    // Only log real searches — bare "load the explore page" requests would be noise.
+    if (type || q) {
+      const session = await auth();
+      void writeAuditLog({
+        userId: session?.user?.userId ?? null,
+        userEmail: session?.user?.email ?? null,
+        action: 'graph_query',
+        detail: JSON.stringify({
+          endpoint: 'explore',
+          type: type ?? null,
+          q: q ?? null,
+          total,
+        }),
+      }).catch(console.error);
+    }
+
     return NextResponse.json({ nodes, total, limit, skip });
   } catch (err) {
     console.error('[GET /api/nodes]', err);
