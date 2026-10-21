@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import neo4j from 'neo4j-driver';
 import getDriver from '@/lib/neo4j';
 
 export type AuditAction =
@@ -75,7 +76,10 @@ export async function queryAuditLog(
     const skip = Math.max(params.skip ?? 0, 0);
 
     const conditions: string[] = [];
-    const queryParams: Record<string, unknown> = { limit, skip };
+    const queryParams: Record<string, unknown> = {
+      limit: neo4j.int(limit),
+      skip: neo4j.int(skip),
+    };
 
     if (params.action) {
       conditions.push('a.action = $action');
