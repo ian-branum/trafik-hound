@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import { auth } from '@/auth';
+import { writeAuditLog } from '@/lib/audit/log';
 import { createNode, searchNodes } from '@/lib/graph/nodes';
 
 // POST /api/nodes — create a node
@@ -7,6 +9,16 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const node = await createNode(body);
+
+    const session = await auth();
+    void writeAuditLog({
+      userId: session?.user?.userId ?? null,
+      userEmail: session?.user?.email ?? null,
+      action: 'node_create',
+      targetId: (node as Record<string, unknown>).id as string ?? null,
+      targetLabel: (node as Record<string, unknown>).label as string ?? null,
+    }).catch(console.error);
+
     return NextResponse.json(node, { status: 201 });
   } catch (err) {
     if (err instanceof ZodError) {

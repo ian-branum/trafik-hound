@@ -25,7 +25,7 @@ export default function Nav() {
   const links = [
     { href: '/explore', label: 'Explore' },
     ...(!isViewer ? [{ href: '/create', label: 'Create' }] : []),
-    ...(isAdmin ? [{ href: '/admin/users', label: 'Admin' }] : []),
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ];
 
   const linkClass = (href: string) =>

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
+import { writeAuditLog } from '@/lib/audit/log';
 import { deleteNode, getNodeById, updateNode } from '@/lib/graph/nodes';
 import { getRelationshipsForNode } from '@/lib/graph/relationships';
 
@@ -65,6 +67,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'Node not found' }, { status: 404 });
     }
 
+    const session = await auth();
+    void writeAuditLog({
+      userId: session?.user?.userId ?? null,
+      userEmail: session?.user?.email ?? null,
+      action: 'node_edit',
+      targetId: id,
+      targetLabel: (node as Record<string, unknown>).label as string ?? null,
+    }).catch(console.error);
+
     return NextResponse.json(node);
   } catch (err) {
     console.error('[PATCH /api/nodes/[id]]', err);
@@ -83,6 +94,15 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ error: 'Node not found' }, { status: 404 });
     }
+
+    const session = await auth();
+    void writeAuditLog({
+      userId: session?.user?.userId ?? null,
+      userEmail: session?.user?.email ?? null,
+      action: 'node_delete',
+      targetId: id,
+    }).catch(console.error);
+
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     console.error('[DELETE /api/nodes/[id]]', err);

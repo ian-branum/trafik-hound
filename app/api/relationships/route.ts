@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
+import { auth } from '@/auth';
+import { writeAuditLog } from '@/lib/audit/log';
 import { createRelationship, deleteRelationship } from '@/lib/graph/relationships';
 import { relationshipType } from '@/lib/schemas/relationships';
 
@@ -8,6 +10,20 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const rel = await createRelationship(body);
+
+    const session = await auth();
+    const fields = body as Record<string, unknown>;
+    void writeAuditLog({
+      userId: session?.user?.userId ?? null,
+      userEmail: session?.user?.email ?? null,
+      action: 'edge_create',
+      detail: JSON.stringify({
+        type: fields.type ?? null,
+        fromId: fields.fromId ?? null,
+        toId: fields.toId ?? null,
+      }),
+    }).catch(console.error);
+
     return NextResponse.json(rel, { status: 201 });
   } catch (err) {
     if (err instanceof ZodError) {
@@ -50,6 +66,14 @@ export async function DELETE(req: NextRequest) {
     if (!deleted) {
       return NextResponse.json({ error: 'Relationship not found' }, { status: 404 });
     }
+
+    const session = await auth();
+    void writeAuditLog({
+      userId: session?.user?.userId ?? null,
+      userEmail: session?.user?.email ?? null,
+      action: 'edge_delete',
+      detail: JSON.stringify({ type, fromId, toId }),
+    }).catch(console.error);
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {

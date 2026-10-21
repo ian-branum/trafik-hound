@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connection } from 'next/server';
+import { auth } from '@/auth';
+import { writeAuditLog } from '@/lib/audit/log';
 import {
   getMinHops,
   getPathsAtDepth,
@@ -32,9 +34,21 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const session = await auth();
+    const logQuery = (extra: Record<string, unknown>) => {
+      void writeAuditLog({
+        userId: session?.user?.userId ?? null,
+        userEmail: session?.user?.email ?? null,
+        action: 'graph_query',
+        targetId: from,
+        detail: JSON.stringify({ endpoint: 'path_search', from, to, ...extra }),
+      }).catch(console.error);
+    };
+
     // Mode A — minimum hops.
     if (mode === 'minhops') {
       const minHops = await getMinHops(from, to);
+      logQuery({ mode: 'minhops', minHops });
       return NextResponse.json({ minHops });
     }
 
@@ -50,6 +64,7 @@ export async function GET(req: NextRequest) {
 
       try {
         const { paths, capped } = await getPathsAtDepth(from, to, depth);
+        logQuery({ mode: 'depth', depth, count: paths.length, capped });
         return NextResponse.json({ paths, depth, capped });
       } catch (err) {
         if (err instanceof PathQueryTimeoutError) {
@@ -61,6 +76,7 @@ export async function GET(req: NextRequest) {
 
     // Legacy behaviour — single shortest path.
     const path = await getShortestPath(from, to);
+    logQuery({ mode: 'shortest', found: Boolean(path) });
     if (!path) {
       return NextResponse.json(
         { error: 'No path found between these nodes' },

@@ -23,6 +23,7 @@ import {
   findUserForCredentials,
 } from "@/lib/auth/users";
 import type { AuthProvider } from "@/lib/auth/types";
+import { writeAuditLog } from "@/lib/audit/log";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -87,6 +88,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.email = dbUser.email;
         token.name = dbUser.name;
         token.picture = dbUser.image;
+
+        // Fire-and-forget — never block the JWT callback on the audit log.
+        void writeAuditLog({
+          userId: dbUser.id,
+          userEmail: dbUser.email,
+          action: "auth_login",
+          detail: provider,
+        }).catch(console.error);
+
         return token;
       }
 
